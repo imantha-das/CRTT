@@ -1,5 +1,5 @@
 # Casualty Rescue Transport and Treament Model
 
-This model explores the impact on casualty survivability and its relation speed of emergency services folowing a volcanic eruption in La Soufriere, Gudaloupe. Due to various number of parameters affecting the rescue operation, the best method to optimize the rescue operation is by testing different conditions such as number of medically equipped vehicles, queuing lengths at hospitals due to overloading etc. This model achieves this by using Agent Based Modelling to investigate how the interaction of agents vary with the change in parameters.
+This model explores the impact on casualty survivability and its relation to the mobilization of  emergency services, folowing a volcanic eruption in La Soufriere, Gudaloupe. Due to diverse variety of parameters affecting rescue operation, the most desirable method to examine the effects of these parameters on the  rescue operation is through fifferent scenario testing. This is achieved by using Agent Based Modelling where different conditions such as number of available medically equipped vehicles, equipment and staff available in hospitals administer care to casualties etc are tested on autonomous agents.  
 
 ![](images/RTT%20Model%20Capture%202.JPG)
