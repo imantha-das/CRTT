@@ -1,4 +1,4 @@
-extensions [gis nw py] 
+extensions [gis nw py]
 globals [
   ;general
   G-target-agent G-target-node avg-time
@@ -356,7 +356,7 @@ to setup-population
 
     ]
     hatch-pop-agents TS2-count [
-      set color 103
+      set color 24
       set shape "person"
       set size 9.75 ;size 0.75 x 13
       set TS 2
@@ -484,7 +484,7 @@ to setup-visual-queue
     set pcolor 63;VH Stabilise
   ]
   ask patches with [pxcor >= 540 and pxcor < 620 and pycor > 80 and pycor <= 160][
-    set pcolor 24 ; on-Route-Hosp-ambulance
+    set pcolor 25 ; on-Route-Hosp-ambulance
     ]
   ask patches with [pxcor >= 540 and pxcor < 620 and pycor > 160 and pycor <= 240][
     set pcolor 34 ; on-Route-Hosp-helicopter
@@ -1648,7 +1648,7 @@ to transfer-to-ambulance
         ask i[
           set on-route-hospital? True
           set on-route-hospital-time ticks
-          move-to one-of patches with [pcolor = 24]
+          move-to one-of patches with [pcolor = 25]
         ]
     ]
       set collected-agents-TS3 temp-list-TS3
@@ -1657,7 +1657,7 @@ to transfer-to-ambulance
         ask i[
           set on-route-hospital? True
           set on-route-hospital-time ticks
-          move-to one-of patches with [pcolor = 24]
+          move-to one-of patches with [pcolor = 25]
         ]
       ]
       if not empty? collected-agents-TS2 or not empty? collected-agents-TS3 [
@@ -1748,6 +1748,7 @@ to select-bed-type
               set hidden? False
               set on-route-hospital? False
               set in-Burn-Beds? True
+              set color violet
               set BB-admission-time ticks
             ]
           ]
@@ -1852,6 +1853,7 @@ to from-non-to-burn-beds
 
       ask i [
         move-to one-of patches with [pcolor = 94]
+        set color violet
         set in-Non-Burn-Beds? False
         set in-Burn-Beds? True
         set BB-admission-Time ticks
@@ -2168,27 +2170,31 @@ to apply-mortality-rates
     i ->
     if ticks = i[
     print "chk 1"
-    ask n-of (0.8 * (count pop-agents with [TS = 3 and Deceased? = False])) (pop-agents with [TS = 3 and Deceased? = False]) [
-      print "chk 2"
-      set deceased? true
-      set deceased-time ticks
-      move-to one-of patches with [pcolor = 4]
-      set hidden? False
+      let agent-pecent round (0.8 * (count pop-agents with [TS = 3 and Deceased? = False]))
+      ask n-of agent-pecent (pop-agents with [TS = 3 and Deceased? = False]) [
+        print "chk 2"
+        set deceased? true
+        set deceased-time ticks
+        move-to one-of patches with [pcolor = 4]
+        set hidden? False
       ]
        ask pop-agents with [TS = 3 and Deceased? = True][
         update-TS3-lists
       ]
     ]
   ]
+
+  ;define agent sets for TS2 based on their current status to apply appropriate mortailty rate
   let TS2-BB-treat pop-agents with [TS = 2 and in-Burn-beds? = True and Deceased? = False]
   let TS2-NB-treat pop-agents with [TS = 2 and in-Non-Burn-beds? = True and deceased? = False]
-  let TS2-pretreat pop-agents with [TS = 2 and (in-Burn-beds? != True or in-Non-Burn-Beds? != True) and Deceased? = False]
+  let TS2-pretreat pop-agents with [TS = 2 and (in-Burn-beds? = False and in-Non-Burn-Beds? = False) and Deceased? = False]
 
   ; mortality rate TS2 in Burned Beds
   foreach (range 240 2880 60)[
     i ->
     if ticks = i[
-      ask n-of (0.00167 * (count TS2-BB-treat))(TS2-BB-Treat) [
+      let agent-percent round (0.00167 * (count TS2-BB-treat))
+      ask n-of agent-percent (TS2-BB-Treat) [
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2204,7 +2210,8 @@ to apply-mortality-rates
   foreach (range 240 1440 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0033 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent round (0.0017 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2218,7 +2225,8 @@ to apply-mortality-rates
   foreach (range 1440 2880 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0017 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent round (0.0066 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2232,7 +2240,8 @@ to apply-mortality-rates
   foreach (range 2880 4320 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0066 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0092 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2246,7 +2255,8 @@ to apply-mortality-rates
   foreach (range 4320 5760 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0092 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0063 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2260,7 +2270,8 @@ to apply-mortality-rates
  foreach (range 5760 99999 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0017 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0063 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2276,7 +2287,8 @@ to apply-mortality-rates
   foreach (range 240 480 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0125 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0125 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2290,7 +2302,8 @@ to apply-mortality-rates
   foreach (range 480 720 60)[
     i ->
     if ticks = i[
-    ask n-of (0.075 * (count TS2-pretreat))(TS2-pretreat)[
+    let agent-percent (0.075 * (count TS2-pretreat))
+    ask n-of agent-percent (TS2-pretreat)[
       set deceased? true
       set deceased-time ticks
       move-to one-of patches with [pcolor = 4]
@@ -2304,7 +2317,8 @@ to apply-mortality-rates
   foreach (range 720 1440 60)[
     i ->
     if ticks = (range 780 1440 60)[
-      ask n-of (0.0333 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0333 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2318,7 +2332,8 @@ to apply-mortality-rates
   foreach (range 1440 99999 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0417 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0417 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2431,7 +2446,6 @@ to go
   ask resc-agents with [Mode = "Travel to PMA"][
     ifelse current-node = node-agent-at and is-PMA? target-agent[
       set Mode "At PMA"
-      set color violet
       set rescue-time 10
     ]
     [
@@ -2468,18 +2482,23 @@ to go
 
   ask resc-agents with [Mode = "Rescuing !!!"][
    Time-to-Rescue
-    if rescue-time = 0[
-      collect-agent
-      set label ""
-      ifelse (length Rescued-agents-list = resc-agent-capacity) or (count pop-agents with [deceased? = False and awaiting-rescue? = False] = 0)[
-         set Mode "Return to PMA"
+      (ifelse
+        rescue-time = 0 and ([deceased?] of target-agent = False)[
+          collect-agent
+          set label ""
+          ifelse (length Rescued-agents-list = resc-agent-capacity) or (count pop-agents with [deceased? = False and awaiting-rescue? = True] = 0)[
+            set Mode "Return to PMA"
+          ]
+          [
+            set rescue-time rescue-time-mins
+            set Mode "Searching !!!"
+          ]
         ]
-        [
-        set rescue-time rescue-time-mins
-        set Mode "Searching !!!"
-        ]
-      ]
-  ]
+        rescue-time = 0 and ([deceased?] of target-agent = True)[
+          set Mode "Searching !!!"
+          set target-agent nobody
+        ])
+    ]
 
      ;*********************************************************************************************** FIND CLOSEST PMA
   ask resc-agents with [Mode = "Return to PMA"][
@@ -2635,7 +2654,7 @@ to go
     set list-of-time fput 1 list-of-time
   ]
   let time-since-eruption 60
-  set avg-time time-since-eruption + (sum [sum list-of-time] of resc-agents) / count resc-agents
+  ;set avg-time time-since-eruption + (sum [sum list-of-time] of resc-agents) / count resc-agents
   ]
 
   ;**************************************************************************************** Update ticks
