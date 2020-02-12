@@ -1,4 +1,4 @@
-extensions [gis nw py]
+extensions [gis nw py] 
 globals [
   ;general
   G-target-agent G-target-node avg-time
@@ -2490,9 +2490,15 @@ to go
 
   ;**************************************************************************************************** FOLLOW PATH
   ask resc-agents with [Mode = "Active"][
-    follow-path
+      ifelse is-pop-agent? target-agent and [Deceased?] of target-agent = true[
+        set mode "Searching !!!"
+        set target-agent nobody
+      ]
+      [
+      follow-path
+      ]
     if (current-node = node-agent-at)[
-      ifelse (is-pop-agent? target-agent) and (length rescued-agents-list < resc-agent-capacity)[
+        ifelse (is-pop-agent? target-agent) and (length rescued-agents-list < resc-agent-capacity) and ([Deceased?] of target-agent != true )[
           set Mode "Rescuing !!!"
 
         ]
