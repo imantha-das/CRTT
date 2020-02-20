@@ -46,18 +46,18 @@ breed [dummy-agents dummy-agent] ;dummy-agent for the purposes of labeling only.
 ;PRIMARY AGENT OWN VARIABLES:
 
 ;Casualties
-pop-agents-own [node-pop patch-pop targeted? TS PMA-at PMA-name PMA-at-node
+pop-agents-own [node-pop patch-pop targeted? targeted-by TS PMA-at PMA-name PMA-at-node
   on-route-PMA-time queue-time stabilise-time to-be-hospitalised-time on-route-hospital-time BB-admission-time NBB-admission-time Hospital-Queue-Time recovered-time deceased-time
   Rescue-by-Helicopter? Rescue-by-ambulance? awaiting-rescue?  on-route-PMA? in-queue? in-stabilisation? to-be-hospitalised?
   on-route-hospital? recovered? in-Burn-beds? in-Non-Burn-Beds? in-Hospital-Queue? Deceased?]
 
 ;Medically Equiped Vehicles
 resc-agents-own [node-resc node-agent-at  Mode Case target-agent route-length next-pos current-pos current-node next-node
-  distance-to-next-node remaining-distance rem-fm-prev-run commute-path list-of-distances list-of-time list-of-m-distances list-of-min-time Rescued-agents-list
+  distance-to-next-node remaining-distance rem-fm-prev-run commute-path list-of-distances list-of-time list-of-m-distances list-of-min-time Rescued-agents-list collected-agent-count
 rescue-time transfer-time]
 ambulances-own [Case node-resc collected-agents-TS2 collected-agents-TS3 Mode node-agent-at target-agent commute-path current-node next-node route-length next-pos current-pos
   distance-to-next-node remaining-distance rem-fm-prev-run list-of-distances list-of-time list-of-m-distances Transfer-Time]
-heli-agents-own [Mode Case helipad-patch hospital-patch current-patch patch-agent-at target-agent distance-to-target remaining-distance  Rescued-Agents-List collected-agents-TS2 collected-agents-TS3
+heli-agents-own [Mode Case helipad-patch hospital-patch current-patch patch-agent-at target-agent distance-to-target remaining-distance  Rescued-Agents-List collected-agent-count collected-agents-TS2 collected-agents-TS3
   list-of-distances list-of-time list-of-m-distances rescue-time transfer-time ]
 
 ;Treatment Facilities
@@ -82,7 +82,7 @@ to setup
   clear-all
 
   setup-gis
-  setup-road-nodes&links
+  setup-road-nodes&links 
   setup-PMA-Hosp-heli
   setup-population
   setup-resc-agents
@@ -94,7 +94,8 @@ to setup
   ]
 end
 ;*********************************************************************************************************************************************************************************************************************************************************************
-
+; SETUP SUPPORTING FUNCTIONS
+; SETUP-GIS : LOADS GIS FILES INTO NETLOGO ENVIRONMENT
 to setup-gis
   ; setups the interface coordinates
 
@@ -104,7 +105,6 @@ to setup-gis
   let max-py 780
   let min-py 0
   resize-world min-px max-px min-py max-py
-
 
   ;set current directory: Folder consisting gis files for model
   set-current-directory "D:\\ABM\\Gudaloupe New Model\\Trial Model"
@@ -124,9 +124,6 @@ to setup-gis
 
   set guo-pop gis:load-dataset "PDC_Humans_default.shp"
 
-  ;gis:set-world-envelope gis:envelope-of guo-impactzone
-  ;gis:set-transformation-ds (gis:envelope-of guo-impactzone)(list (min-px) (max-px) (min-py) (max-py))
-
   ;for viewing only, to switch world-envelope : NOTE - DISTANCES CHANGE
   gis:set-world-envelope gis:envelope-of guo-boundary
   gis:set-transformation-ds (gis:envelope-of guo-boundary)(list (min-px) (max-px) (min-py) (max-py))
@@ -136,6 +133,7 @@ to setup-gis
   ;tick-advance 60
 end
 
+; SETUP-ROAD-NODES-AND-LINKS : CONSTRUCT NODES AT VERTICES OF POLYLINES, CONNECTS NODES THROUGH LINKS
 to setup-road-nodes&links
   let dist-list []
 
@@ -187,7 +185,7 @@ to setup-road-nodes&links
       ]
     ]
   ]
-  print("Gis sum distance")
+  ;print("Gis sum distance")
   show sum dist-list
 
   let netlogo-dist-list []
@@ -206,7 +204,7 @@ to setup-road-nodes&links
     set netlogo-dist link-distance
     set netlogo-dist-list fput netlogo-dist netlogo-dist-list
   ]
-  print("Netlogo Sum Distance: ")
+  ;print("Netlogo Sum Distance: ")
   ;show net-logo-dist-list
   show sum netlogo-dist-list
 
@@ -218,6 +216,7 @@ to setup-road-nodes&links
 
 end
 
+; SETUP-PMA-HOSP-HELI : CREATE AGENTS FOR PMA, HOSPITAL AND HELIPAD AT THE SPECIFIED LOCATIONS FROM THE GIS FILES
 to setup-PMA-Hosp-heli
   foreach gis:feature-list-of guo-PMA-Hosp-Airpt[
     i ->
@@ -300,8 +299,9 @@ to setup-PMA-Hosp-heli
   ]
 end
 
+;SETUP-POPULATION : CREATE CASUALTY-AGENTS BASED ON THE NUMBER AND LOCATION FROM GIS FILE
 to setup-population
-
+  ; create pop nodes which are the locations at which pop-agents (casualties) will be created at.
   foreach gis:feature-list-of guo-pop[
     i ->
 
@@ -330,7 +330,7 @@ to setup-population
       ]
     ]
   ]
-
+  ; Create casualties at the pop nodes
   ask pop-nodes[
     hatch-pop-agents TS1-count [
       set color 44
@@ -356,7 +356,7 @@ to setup-population
 
     ]
     hatch-pop-agents TS2-count [
-      set color 103
+      set color 24
       set shape "person"
       set size 9.75 ;size 0.75 x 13
       set TS 2
@@ -421,6 +421,7 @@ to setup-population
 
 end
 
+;CREATE RESCUE AGENTS (AMBULANCE TYPE-A) BASED ON USER INPUT FROM THE INTERFACE
 to setup-resc-agents
   create-resc-agents Number-of-Rescuers[
     set shape "ambulance-shape"
@@ -433,6 +434,7 @@ to setup-resc-agents
     set list-of-time []
     set list-of-m-distances []
     set Rescued-Agents-List []
+    set collected-agent-count 0
     set target-agent nobody
     set rescue-time rescue-time-mins
     set transfer-time transfer-time-mins
@@ -440,6 +442,7 @@ to setup-resc-agents
 
 end
 
+;CREATE HELI AGENTS (HELICOPTERS) BASED ON THE USER INPUT FROM THE INTERFACE
 to setup-helicopter
   create-heli-agents Number-of-Helicopters[
     set shape "Helicopter"
@@ -458,6 +461,7 @@ to setup-helicopter
     set list-of-time []
     set list-of-m-distances []
     set Rescued-Agents-list []
+    set collected-agent-count 0
     set collected-agents-TS2 []
     set collected-agents-TS3 []
     set rescue-time rescue-time-mins
@@ -465,6 +469,7 @@ to setup-helicopter
   ]
 end
 
+; CREATE BOXES WHICH ARE USED TO REPRESENT THE CURRENT STATUS (I.E ON ROUTE TO PMA, IN STABILISATION ETC) OF CASUALTIES. 
 to setup-visual-queue
     ;create patches that will represent the queue and stabilisation. When pop agents are added to the queue/stabilisation lists, they are moved to the respective patches
    ask patches with [pxcor >= 540 and pxcor < 620 and pycor >= 0 and pycor <= 80][
@@ -484,7 +489,7 @@ to setup-visual-queue
     set pcolor 63;VH Stabilise
   ]
   ask patches with [pxcor >= 540 and pxcor < 620 and pycor > 80 and pycor <= 160][
-    set pcolor 24 ; on-Route-Hosp-ambulance
+    set pcolor 25 ; on-Route-Hosp-ambulance
     ]
   ask patches with [pxcor >= 540 and pxcor < 620 and pycor > 160 and pycor <= 240][
     set pcolor 34 ; on-Route-Hosp-helicopter
@@ -521,6 +526,7 @@ to setup-visual-queue
 
 end
 
+; FOR THE PURPOSE OF LABELLING AGENTS 
 to setup-labels
   create-dummy-agents 5[
    set used-up? False
@@ -579,6 +585,7 @@ end
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! END SETUP
 ;
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SUPPORT FUNCTIONS FOR GO PROCEDURE
+; SEARCH ALGORITHM, THAT ASSIGNS EACH HELI AGENT (RESCUE HELICOPTER) TO A POP AGENT (CASUALTIES OF CAT 2 OR 3) BASED ON THE MINIMIZMED BEST TOTAL DISTANCE FOR ALL AGENTS
 to setup-munkres-heli
   let pop-TS23 pop-agents with [(TS = 2 or TS = 3) and targeted? = False and Deceased? = False] ; list of pop-agents of TS cat 2 or 3
   if count pop-TS23 > 0[
@@ -632,9 +639,9 @@ to setup-munkres-heli
 
       "    m = Munkres()"
       "    indexes = m.compute(dist_mat)"
-      "    print('Munkres index (heli-agent, pop-agent) key value pairs: ',indexes)"
-      "    print(' -> heli-agent, pop-agent distance table: ')"
-      "    print(df_TS23)"
+      "    #print('Munkres index (heli-agent, pop-agent) key value pairs: ',indexes)"
+      "    #print(' -> heli-agent, pop-agent distance table: ')"
+      "    #print(df_TS23)"
 
       ; To extract pop-agent and resc-agent who numbers from indexes
       "    dist_values = []"
@@ -643,13 +650,13 @@ to setup-munkres-heli
       "    for i in indexes:"
       "        dist_values.append(df_TS23.iloc[i[0],i[1]])"
       "        heli_pop_who.append((df_TS23.index[i[0]],df_TS23.columns[i[1]]))"
-      "    print('Distance Values List: ',dist_values)"
-      "    print('heli_pop_who: ',heli_pop_who)"
+      "    #print('Distance Values List: ',dist_values)"
+      "    #print('heli_pop_who: ',heli_pop_who)"
 
       ;*************************************   Number of helicopters > Number of pop_TS23   ******************************************
 
       "else:"
-      "    print('inverse heli pop')"
+      "    #print('inverse heli pop')"
       "    dist_mat_trans = np.transpose(dist_mat)"
       "    df_TS23 = pd.DataFrame()"
       "    df_TS23 = pd.concat([df_TS23, pd.DataFrame(dist_mat_trans)])"
@@ -658,9 +665,9 @@ to setup-munkres-heli
 
       "    m = Munkres()"
       "    indexes = m.compute(dist_mat_trans)"
-      "    print('Munkres index (pop-agent, heli-agent) key value pairs: ',indexes)"
-      "    print(' -> pop-agent, heli-agent distance table: ')"
-      "    print(df_TS23)"
+      "    #print('Munkres index (pop-agent, heli-agent) key value pairs: ',indexes)"
+      "    #print(' -> pop-agent, heli-agent distance table: ')"
+      "    #print(df_TS23)"
 
       ; To extract pop-agent and resc-agent who numbers from indexes
       "    dist_values = []"
@@ -669,8 +676,8 @@ to setup-munkres-heli
       "    for i in indexes:"
       "        dist_values.append(df_TS23.iloc[i[0],i[1]])"
       "        pop_heli_who.append((df_TS23.index[i[0]],df_TS23.columns[i[1]]))"
-      "    print('Distance Values List: ',dist_values)"
-      "    print('pop_heli_who: ',pop_heli_who)"
+      "    #print('Distance Values List: ',dist_values)"
+      "    #print('pop_heli_who: ',pop_heli_who)"
       )
 
 
@@ -693,6 +700,7 @@ to setup-munkres-heli
           ask target-agent [
             set targeted? True
             set Rescue-by-Helicopter? True
+            set targeted-by heli-agent heli-who
           ]
         ]
 
@@ -714,6 +722,7 @@ to setup-munkres-heli
           ask target-agent [
             set targeted? true
             set Rescue-by-Helicopter? True
+            set targeted-by heli-agent heli-who
           ]
         ]
       ]
@@ -721,6 +730,7 @@ to setup-munkres-heli
 ]
 end
 
+; SAME AS SETUP-MUNKRES-HELI, BUT ASSIGNING RESCUE AGENTS (AMBULANCE TYPE-A) TO ALL CASUALTIES (TS1,TS2,TS3)
 to setup-munkres
   ;********************************************************************************************************************************************************************************************************************************   Search TS 2 or 3 Agents
 
@@ -786,9 +796,9 @@ to setup-munkres
 
       "    m = Munkres()"
       "    indexes = m.compute(dist_mat)"
-      "    print('Munkres index (resc-agent, pop-agent) key value pairs: ',indexes)"
-      "    print(' -> resc-agent, pop-agent distance table: ')"
-      "    print(df_TS23)"
+      "    #print('Munkres index (resc-agent, pop-agent) key value pairs: ',indexes)"
+      "    #print(' -> resc-agent, pop-agent distance table: ')"
+      "    #print(df_TS23)"
 
       ; To extract pop-agent and resc-agent who numbers from indexes
       "    dist_values = []"
@@ -797,13 +807,13 @@ to setup-munkres
       "    for i in indexes:"
       "        dist_values.append(df_TS23.iloc[i[0],i[1]])"
       "        resc_pop_who.append((df_TS23.index[i[0]],df_TS23.columns[i[1]]))"
-      "    print('Distance Values List: ',dist_values)"
-      "    print('resc_pop_who: ',resc_pop_who)"
+      "    #print('Distance Values List: ',dist_values)"
+      "    #print('resc_pop_who: ',resc_pop_who)"
 
       ;*************************************   Number of rescuers > Number of pop_TS23   ******************************************
 
       "else:"
-      "    print('inverse resc pop')"
+      "    #print('inverse resc pop')"
       "    dist_mat_trans = np.transpose(dist_mat)"
       "    df_TS23 = pd.DataFrame()"
       "    df_TS23 = pd.concat([df_TS23, pd.DataFrame(dist_mat_trans)])"
@@ -812,9 +822,9 @@ to setup-munkres
 
       "    m = Munkres()"
       "    indexes = m.compute(dist_mat_trans)"
-      "    print('Munkres index (pop-agent, resc-agent) key value pairs: ',indexes)"
-      "    print(' -> pop-agent, resc-agent distance table: ')"
-      "    print(df_TS23)"
+      "    #print('Munkres index (pop-agent, resc-agent) key value pairs: ',indexes)"
+      "    #print(' -> pop-agent, resc-agent distance table: ')"
+      "    #print(df_TS23)"
 
       ; To extract pop-agent and resc-agent who numbers from indexes
       "    dist_values = []"
@@ -823,8 +833,8 @@ to setup-munkres
       "    for i in indexes:"
       "        dist_values.append(df_TS23.iloc[i[0],i[1]])"
       "        pop_resc_who.append((df_TS23.index[i[0]],df_TS23.columns[i[1]]))"
-      "    print('Distance Values List: ',dist_values)"
-      "    print('pop_resc_who: ',pop_resc_who)"
+      "    #print('Distance Values List: ',dist_values)"
+      "    #print('pop_resc_who: ',pop_resc_who)"
       )
 
     ;converting python variables to netlogo variables
@@ -846,6 +856,7 @@ to setup-munkres
           ask target-agent [
             set targeted? True
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -868,6 +879,7 @@ to setup-munkres
           ask target-agent [
             set targeted? true
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -937,9 +949,9 @@ to setup-munkres
 
       "    m = Munkres()"
       "    indexes = m.compute(dist_mat)"
-      "    print('Munkres index (resc-agent, pop-agent) key value pairs: ',indexes)"
-      "    print(' -> resc-agent, pop-agent distance table: ')"
-      "    print(df_TS1)"
+      "    #print('Munkres index (resc-agent, pop-agent) key value pairs: ',indexes)"
+      "    #print(' -> resc-agent, pop-agent distance table: ')"
+      "    #print(df_TS1)"
 
       ; To extract pop-agent and resc-agent who numbers from indexes
       "    dist_values = []"
@@ -948,13 +960,13 @@ to setup-munkres
       "    for i in indexes:"
       "        dist_values.append(df_TS1.iloc[i[0],i[1]])"
       "        resc_pop_who.append((df_TS1.index[i[0]],df_TS1.columns[i[1]]))"
-      "    print('Distance Values List: ',dist_values)"
-      "    print('resc_pop_who: ',resc_pop_who)"
+      "    #print('Distance Values List: ',dist_values)"
+      "    #print('resc_pop_who: ',resc_pop_who)"
 
       ;*************************************   Number of rescuers > Number of pop_TS1   ******************************************
 
       "else:"
-      "    print('inverse resc pop')"
+      "    #print('inverse resc pop')"
       "    dist_mat_trans = np.transpose(dist_mat)"
       "    df_TS1 = pd.DataFrame()"
       "    df_TS1 = pd.concat([df_TS1, pd.DataFrame(dist_mat_trans)])"
@@ -965,9 +977,9 @@ to setup-munkres
 
       "    m = Munkres()"
       "    indexes = m.compute(dist_mat_trans)"
-      "    print('Munkres index (pop-agent, resc-agent) key value pairs: ',indexes)"
-      "    print(' -> pop-agent, resc-agent distance table: ')"
-      "    print(df_TS1)"
+      "    #print('Munkres index (pop-agent, resc-agent) key value pairs: ',indexes)"
+      "    #print(' -> pop-agent, resc-agent distance table: ')"
+      "    #print(df_TS1)"
 
       ; To extract pop-agent and resc-agent who numbers from indexes
       "    dist_values = []"
@@ -976,8 +988,8 @@ to setup-munkres
       "    for i in indexes:"
       "        dist_values.append(df_TS1.iloc[i[0],i[1]])"
       "        pop_resc_who.append((df_TS1.index[i[0]],df_TS1.columns[i[1]]))"
-      "    print('Distance Values List: ',dist_values)"
-      "    print('pop_resc_who: ',pop_resc_who)"
+      "    #print('Distance Values List: ',dist_values)"
+      "    #print('pop_resc_who: ',pop_resc_who)"
       )
     ;converting python variables to netlogo variables
 
@@ -998,6 +1010,7 @@ to setup-munkres
           ask target-agent [
             set targeted? True
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -1020,6 +1033,7 @@ to setup-munkres
           ask target-agent [
             set targeted? true
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -1029,7 +1043,7 @@ to setup-munkres
 end
 
 ;************************************************************************************************************************************************************************************************************************************ Find Path
-
+; FUNCTION TO IDENTIFY THE NODES BETWEEN RESCUE AGENT (AMBULANCE-TYPE A / AMBULANCE TYPE B) AND THEIR TARGET (POP-AGENT, PMA, HOSPITAL)
 to find-path
 
   set current-node node-resc
@@ -1044,7 +1058,7 @@ end
 
 
 ;************************************************************************************************************************************************************************************************************************************ Follow Path
-
+; MOVEMENT FUNCTION FOR HELI-AGENTS (HELICOPTERS) BASED ON THE MOVING FROM PATCH TO PATCH.
 to follow-path-heli
   let speed-m-min (Speed-Helicopter * 1000 / 60)
   let jump-dist-m speed-m-min
@@ -1162,6 +1176,7 @@ to follow-path-heli
 
 end
 
+;RESCUE AGENT / AMBULANCE AGENT (TYPE A/ TYPE B) MOVEMENT FUNCTION TO MOVE FROM ONE NODE TO ANOTHER.
 to follow-path
   let speed-m-min (speed * 1000 / 60)
   let jump-dist-m speed-m-min
@@ -1190,8 +1205,6 @@ to follow-path
       remaining-distance < distance-to-next-node and remaining-distance > 0 [set Case 3]
       remaining-distance > distance-to-next-node [set Case 4]
       )
-
-
 
     if Case = 0[
       set jump-dist-net (jump-dist-net + rem-fm-prev-run)
@@ -1321,8 +1334,10 @@ to follow-path
 end
 
 ;*************************************************************************************************************************************************************************************************************************On route to hospital
+; HELI-AGENT (HELICOPTER) , RESC-AGENT (AMBULANCE TYPE A) FUNCTION TO COLLECT POP-AGENTS (CASUALTIES) UPON ARRIVAL TO THE DESTINATION
 to collect-agent
   set Rescued-agents-list lput target-agent Rescued-agents-list
+  set collected-agent-count collected-agent-count + 1
   ask target-agent [
     if Rescue-by-ambulance? = True[
       move-to one-of patches with [pcolor = 125]
@@ -1343,6 +1358,8 @@ end
 
 
 ;************************************************************************************************************************************************************************************************************************************ Return to PMA
+
+; RESC-AGENT (AMBULANCE TYPE-A) FUNCTION : IF THE CAPACITY OF THE NUMBER OF CASUALTIES HAVE REACHED, ASSIGNS THE DESTINATION AS PMA 
 to return-PMA
   ;Find PMA with least Queue / Closest PMA
 
@@ -1356,13 +1373,13 @@ to return-PMA
     ask G-target-node [
       set G-target-agent min-one-of PMA's in-radius 0.0001 [distance myself]
     ]
-    print "Selected closest PMA"
+    ;print "Selected closest PMA"
     set node-agent-at G-target-node
     set target-agent G-target-agent
   ]
   [
     let target-PMA min-one-of PMA's [length queue-TS1 + length queue-TS23]
-    print "Selected PMA with minimum queue"
+    ;print "Selected PMA with minimum queue"
     set node-agent-at [node-PMA] of target-PMA
     show node-agent-at
     set target-agent target-PMA
@@ -1371,6 +1388,7 @@ to return-PMA
 end
 
 ;************************************************************************************************************************************************************************************************************************************ Time to Rescue
+;HELI-AGENT (HELICOPTER) / RESC-AGENT (AMBULANCE TYPE-A) FUNCTION : ACTIVATES A TIME COUNTER SET AT THE USER INTERFACE, UPON REACHING ZERO, THE CASUALTY AGENT WILL BE COLLECTED.
 to Time-to-Rescue
   set Rescue-time Rescue-time - 1
   set list-of-time lput 1 list-of-time
@@ -1378,6 +1396,7 @@ to Time-to-Rescue
 end
 
 ;************************************************************************************************************************************************************************************************************************************ Time to Transfer
+;HELI-AGENT (HELICOPTER) / RESC-AGENT (AMBULANCE TYPE-A) FUNCTION : ACTIVATES A TIME COUNTER SET AT THE USER INTERFACE, UPON REACHING ZERO, THE CASUALTY AGENT WILL BE TRANSFERED TO PMA OR HOSPITAL
 to Time-to-Transfer
   set Transfer-time Transfer-time - 1
   set list-of-time lput 1 list-of-time
@@ -1385,6 +1404,7 @@ to Time-to-Transfer
 end
 
 ;************************************************************************************************************************************************************************************************************************************ Setup PMA Capacity
+;PMA FUNCTION : SETS THE PMA CAPACITY BASED ON OPERATIONAL TIMES, THESE ARE SET BY THE USER AT THE INTERFACE
 to setup-PMA-capacity
   let time-1 (pma-operational-time-1)
   let time-2 (pma-operational-time-2)
@@ -1398,6 +1418,7 @@ to setup-PMA-capacity
 end
 
 ;*********************************************************************************************************************************************************************************************************************************** Move to Queue or Stabilisation
+; RESC-AGENT/ PMA FUNCTION : UPON REACHING THE PMA (BY RESC-AGENT / AMBULANCE TYPE-A), CASUALTIES ARE TRANSFERED TO QUEUE OR STABILISATION. SATBILISATION BEING THE FIRST PREFERENCE UPON AVAILABILITY
 to move-to-queue-or-stabilise
   let collected [Rescued-agents-list] of self ;collected: temp variable , collected-pop-agents: resc-agent variable holding the pop-agents that are in the ambulance
   ask target-agent[;ask PMA
@@ -1500,6 +1521,7 @@ end
 
 ;******************************************************************************************************************************************************************************************************************************* Move from Queue to Stabilisation
 
+;PMA FUNCTION : MOVES POP-AGENTS (CASUALTIES) FROM QUEUE TO TO STABILISATION IF THERE IS AVIALBLE CAPACITY IN STABILISATION QUEUE.
 to move-from-queue-stabilise
   ;move-from-queue-stabilise: Function to move TS1 & TS23 pop agents from Queue to Stabilisation at PMA
 
@@ -1569,7 +1591,7 @@ to TS1-recovered
       set recovered-TS1 lput recovered-agent recovered-TS1
       set recovered-time-TS1 lput ticks recovered-Time-TS1
 
-      print ("The recovered agent is: ") show recovered-agent
+      ;print ("The recovered agent is: ") show recovered-agent
       set stabilise-time-TS1 remove-item pos stabilise-time-TS1
       set stabilise-TS1 remove recovered-agent stabilise-TS1
 
@@ -1628,13 +1650,13 @@ to transfer-to-ambulance
     ask agents-to-be-hospitalised [
       if TS = 2[
         set temp-list-TS2 fput self temp-list-TS2
-        print ("Temp list TS2: ")
+        ;print ("Temp list TS2: ")
         show temp-list-TS2
         set to-be-hospitalised? False
       ]
       if TS = 3[
         set temp-list-TS3 fput self temp-list-TS3
-        print("Temp list TS3: ")
+        ;print("Temp list TS3: ")
         show temp-list-TS3
         set to-be-hospitalised? False
       ]
@@ -1648,7 +1670,7 @@ to transfer-to-ambulance
         ask i[
           set on-route-hospital? True
           set on-route-hospital-time ticks
-          move-to one-of patches with [pcolor = 24]
+          move-to one-of patches with [pcolor = 25]
         ]
     ]
       set collected-agents-TS3 temp-list-TS3
@@ -1657,7 +1679,7 @@ to transfer-to-ambulance
         ask i[
           set on-route-hospital? True
           set on-route-hospital-time ticks
-          move-to one-of patches with [pcolor = 24]
+          move-to one-of patches with [pcolor = 25]
         ]
       ]
       if not empty? collected-agents-TS2 or not empty? collected-agents-TS3 [
@@ -2167,28 +2189,32 @@ to apply-mortality-rates
   foreach (range 240 2880 60)[
     i ->
     if ticks = i[
-    print "chk 1"
-    ask n-of (0.8 * (count pop-agents with [TS = 3 and Deceased? = False])) (pop-agents with [TS = 3 and Deceased? = False]) [
-      print "chk 2"
-      set deceased? true
-      set deceased-time ticks
-      move-to one-of patches with [pcolor = 4]
-      set hidden? False
+    ;print "chk 1"
+      let agent-pecent round (0.8 * (count pop-agents with [TS = 3 and Deceased? = False]))
+      ask n-of agent-pecent (pop-agents with [TS = 3 and Deceased? = False]) [
+        ;print "chk 2"
+        set deceased? true
+        set deceased-time ticks
+        move-to one-of patches with [pcolor = 4]
+        set hidden? False
       ]
        ask pop-agents with [TS = 3 and Deceased? = True][
         update-TS3-lists
       ]
     ]
   ]
+
+  ;define agent sets for TS2 based on their current status to apply appropriate mortailty rate
   let TS2-BB-treat pop-agents with [TS = 2 and in-Burn-beds? = True and Deceased? = False]
   let TS2-NB-treat pop-agents with [TS = 2 and in-Non-Burn-beds? = True and deceased? = False]
-  let TS2-pretreat pop-agents with [TS = 2 and (in-Burn-beds? != True or in-Non-Burn-Beds? != True) and Deceased? = False]
+  let TS2-pretreat pop-agents with [TS = 2 and (in-Burn-beds? = False and in-Non-Burn-Beds? = False) and Deceased? = False]
 
   ; mortality rate TS2 in Burned Beds
   foreach (range 240 2880 60)[
     i ->
     if ticks = i[
-      ask n-of (0.00167 * (count TS2-BB-treat))(TS2-BB-Treat) [
+      let agent-percent round (0.00167 * (count TS2-BB-treat))
+      ask n-of agent-percent (TS2-BB-Treat) [
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2204,7 +2230,8 @@ to apply-mortality-rates
   foreach (range 240 1440 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0033 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent round (0.0017 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2218,7 +2245,8 @@ to apply-mortality-rates
   foreach (range 1440 2880 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0017 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent round (0.0066 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2232,7 +2260,8 @@ to apply-mortality-rates
   foreach (range 2880 4320 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0066 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0092 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2246,7 +2275,8 @@ to apply-mortality-rates
   foreach (range 4320 5760 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0092 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0063 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2260,7 +2290,8 @@ to apply-mortality-rates
  foreach (range 5760 99999 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0017 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0063 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2276,7 +2307,8 @@ to apply-mortality-rates
   foreach (range 240 480 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0125 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0125 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2290,7 +2322,8 @@ to apply-mortality-rates
   foreach (range 480 720 60)[
     i ->
     if ticks = i[
-    ask n-of (0.075 * (count TS2-pretreat))(TS2-pretreat)[
+    let agent-percent (0.075 * (count TS2-pretreat))
+    ask n-of agent-percent (TS2-pretreat)[
       set deceased? true
       set deceased-time ticks
       move-to one-of patches with [pcolor = 4]
@@ -2304,7 +2337,8 @@ to apply-mortality-rates
   foreach (range 720 1440 60)[
     i ->
     if ticks = (range 780 1440 60)[
-      ask n-of (0.0333 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0333 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2318,7 +2352,8 @@ to apply-mortality-rates
   foreach (range 1440 99999 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0417 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0417 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2330,10 +2365,307 @@ to apply-mortality-rates
     ]
   ]
 
+  ask resc-agents [renew-resc-list]
+  ask ambulances [renew-ambulance-list]
+  ask PMA's [renew-pma-lists]
+  ask hospitals [renew-hospital-lists]
+  ask heli-agents[renew-helicopter-list]
 end
 
-;********************************************************************************************************************************************************************************************************************************** Print lists
-to print-lists
+
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! END OF SUPPORT FUNCTIONS
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TO GO
+
+to go
+
+  if ticks >= 60 and ticks <= 7200[
+
+    ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ RESCUE AGENT FUNCTIONS
+    ask resc-agents with [Mode = "Searching !!!"][
+      ifelse count pop-agents with [targeted? = False and deceased? = False] != 0[ ; stops search function if there are no pop-agents left
+      ;radius-search
+        if target-agent = nobody[
+          setup-munkres
+        ]
+      ]
+      ;else statement: if pop-agents are zero
+      [
+        set mode "Return to PMA"
+        ;set label Mode
+
+      ]
+      if target-agent != nobody and is-pop-agent? target-agent[
+        set color [color] of target-agent
+        set Mode "Find Path"
+        ;set label Mode
+      ]
+    ]
+
+   ;***************************************************************************************************** FIND PATH
+  ask resc-agents with [Mode = "Find Path"][
+    find-path
+    ifelse commute-path != False and length commute-path > 1 [
+      set Mode "Active"
+      ;set label Mode
+    ]
+    [
+      ;else statement: Containing two if statements
+      if commute-path = False [
+        output-print "ERROR THERE IS NO COMMUTE PATH FOR RESC OR AMBULANCE AGENTS"
+      ]
+      if length commute-path = 1[
+        set Mode "Rescuing !!!"
+        ;output-print "Two agents on same Node satisfied"
+      ]
+    ]
+  ]
+
+    ;************************************************************************************************** TRAVEL TO PMA
+  ask resc-agents with [Mode = "Travel to PMA"][
+    ifelse current-node = node-agent-at and is-PMA? target-agent[
+      set Mode "At PMA"
+      set rescue-time 10
+    ]
+    [
+      set color green
+      follow-path
+    ]
+  ]
+
+    ;****************************************************************** TRANSFERING AGENTS TO QUEUE OR STABILISATION
+    ask resc-agents with [Mode = "At PMA"][
+      Time-to-Transfer
+      if transfer-time = 0
+      [
+        set label ""
+        move-to-queue-or-stabilise
+        set collected-agent-count 0 ; At PMA, after unloading casualties set counter to 0 
+        ifelse count pop-agents with [targeted? = false] != 0[
+          ;At PMA check if there are any pop-agents who havent been targeted
+          set Mode "Searching !!!"
+          set transfer-time transfer-time-mins
+          set target-agent nobody
+        ]
+        [
+          ;else statement: If there are no pop-agents left dont do anything
+          set Mode "Return to PMA"
+          ;set label Mode
+        ]
+      ]
+    ]
+
+
+
+    ;********************************************************************************** RESCUE / TIME TO COLLECT AGENT
+
+  ask resc-agents with [Mode = "Rescuing !!!"][
+   Time-to-Rescue
+      (ifelse
+        rescue-time = 0 and ([deceased?] of target-agent = False)[
+          collect-agent
+          set label ""
+          ifelse (collected-agent-count = resc-agent-capacity) or (count pop-agents with [deceased? = False and awaiting-rescue? = True] = 0)[
+            set Mode "Return to PMA"
+          ]
+          [
+            set rescue-time rescue-time-mins
+            set Mode "Searching !!!"
+          ]
+        ]
+        rescue-time = 0 and ([deceased?] of target-agent = True)[
+          ; if the agent been rescued is deceased
+          set Mode "Searching !!!"
+          set target-agent nobody
+          set rescue-time rescue-time-mins
+        ])
+    ]
+
+     ;*********************************************************************************************** FIND CLOSEST PMA
+  ask resc-agents with [Mode = "Return to PMA"][
+    return-PMA
+    find-path
+    set Mode "Travel to PMA"
+  ]
+
+  ;**************************************************************************************************** FOLLOW PATH
+  ask resc-agents with [Mode = "Active"][
+      ifelse is-pop-agent? target-agent and [Deceased?] of target-agent = true[
+        set mode "Searching !!!"
+        set target-agent nobody
+      ]
+      [
+      follow-path
+      ]
+    if (current-node = node-agent-at)[
+        ifelse (is-pop-agent? target-agent) and (length rescued-agents-list < resc-agent-capacity) and ([Deceased?] of target-agent != true )[
+          set Mode "Rescuing !!!"
+
+        ]
+        [
+          ;else statement: if the agent has died
+          set Mode "Searching !!!"
+        ]
+    ]
+  ]
+
+  ;**************************************************************************************************  RESCUE ENDED
+  ask resc-agents with [Mode = "Rescue Ended"][
+    set list-of-time fput 1 list-of-time
+  ]
+  ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ HELICOPTER RESCUE
+    if helicopter-rescue = True [
+      ask heli-agents with [Mode = "Searching !!!"][
+        ifelse count pop-agents with [(TS = 2 or TS = 3) and targeted? = False and deceased? = False] != 0[
+          if target-agent = nobody[
+            setup-munkres-heli
+          ]
+        ]
+        [
+          ;Else statement: if there are no TS2 or TS3 agents to rescue anymore,
+          ;Helicopter already at site and have already rescued more than one agent: go to hospital
+          ifelse length Rescued-agents-list > 0 [
+            set Mode "Return to Hospital"
+            set target-agent one-of hospitals
+            set patch-agent-at hospital-patch
+          ]
+          ;Helicopter at hospital but no agents to rescue: go to helipad
+          [
+            set Mode "Return to Helipad"
+            move-to helipad-patch
+            set current-patch helipad-patch
+            set target-agent nobody
+            set patch-agent-at nobody
+          ]
+        ]
+
+        if target-agent != nobody and is-pop-agent? target-agent[
+          set Mode "Active"
+        ]
+      ]
+      ask heli-agents with [Mode = "Active"][
+        follow-path-heli
+        if current-patch = patch-agent-at[
+          set Mode "Rescuing !!!"
+        ]
+      ]
+
+      ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Helicopter : Time to Rescue Agent
+
+      ask heli-agents with [Mode = "Rescuing !!!"][
+        time-to-rescue
+        (ifelse rescue-time = 0 and [deceased?] of target-agent = False[
+          collect-agent
+          ifelse collected-agent-count =  Helicopter-capacity or (count pop-agents with [ (TS = 2 or TS = 3) and deceased? = False and awaiting-rescue? = True] = 0)[
+            set Mode "Return to Hospital"
+            set target-agent one-of hospitals
+            set patch-agent-at hospital-patch
+            set Rescue-time Rescue-time-mins
+          ]
+          [
+            set Mode "Searching !!!"
+            set Rescue-time Rescue-time-mins
+          ]
+          ]
+          rescue-time = 0 and ([deceased?] of target-agent = True)[
+            ; if the agent been rescued is deceased
+            set Mode "Searching !!!"
+            set target-agent nobody
+            set rescue-time rescue-time-mins
+          ]
+        )
+      ]
+
+      ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Helicopter : Return to Hospital and at hospital
+
+      ask heli-agents with [Mode = "Return to Hospital"][
+        follow-path-heli
+        if is-hospital? target-agent and current-patch = patch-agent-at[
+          set Mode "At Hospital"
+        ]
+      ]
+      ask heli-agents with [Mode = "At Hospital"][
+        Time-to-transfer
+        if transfer-time = 0[
+          identify-TS2-TS3-Heli
+          set collected-agent-count 0
+          select-bed-type
+          reset-lists-variables-heli
+          set Mode "Searching !!!"
+        ]
+      ]
+    ]
+
+  ;######################################################################################################
+
+
+
+  ;************************* SETUP PMA CAPACITY, TRANSFERING AGENTS FROM QUEUE TO AT STABILISATION, REMOVING DEAD AGENTS
+
+  ask PMA's [
+    setup-PMA-capacity
+    renew-PMA-lists ; this is for removeing deceased agents
+    move-from-queue-stabilise
+    TS1-recovered
+    transfer-to-ambulance
+  ]
+
+  ;****************************************************************************************** FIND HOSPITAL
+  ask ambulances with [Mode = "Active"][
+    set Transfer-time Transfer-time-mins
+    find-hospital
+  ]
+  ;***************************************************************************************** HOSPITAL COMMUTE PATH
+  ask ambulances with [Mode = "Find Commute Path"][
+    ;print "Finding commute path"
+    find-path
+    Time-To-Transfer
+    if transfer-time = 0[
+    set Mode "Travel to Hospital"
+    set transfer-time transfer-time-mins
+    ]
+  ]
+  ;***************************************************************************************** TRAVEL TO HOSPITAL
+  ask ambulances with [Mode = "Travel to Hospital"][
+    follow-path
+    if (current-node = node-agent-at)[
+      Time-to-Transfer
+      set label ""
+      if Transfer-Time = 0[
+      select-bed-type
+      die
+      ]
+    ]
+  ]
+  ;***************************************************************************************** MOVE AGENTS FROM NON BURN BEDS TO BURN BEDS
+  ask hospitals[
+    renew-hospital-lists
+    from-non-to-burn-beds
+    from-Hospital-Queue-to-Non-Burn-Beds
+  ]
+
+  ;***************************************************************************************** TIME UPDATE FUNCTIONS
+    ask resc-agents with [Mode = "Rescue Ended"][
+    set list-of-time fput 1 list-of-time
+  ]
+  let time-since-eruption 60
+  ;set avg-time time-since-eruption + (sum [sum list-of-time] of resc-agents) / count resc-agents
+  ]
+
+  ;**************************************************************************************** Update ticks
+  if ticks >= 0 and ticks <= 7200 [
+  tick
+
+ ;***************************************************************************************** TO APPLY MORTALITY RATES AND REMOVE AGENTS
+    apply-mortality-rates
+
+  ]
+end
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   Print Data    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Print lists
+;List Method
+to print-deceased-lists
 
   output-type "Recovered-TS1: " output-print Recovered-TS1
   output-type "Recovered-TS1 time: " output-print Recovered-time-TS1
@@ -2380,268 +2712,56 @@ to print-lists
 
 end
 
+to print-dec-count-lists
 
-;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! END OF SUPPORT FUNCTIONS
-;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TO GO
+  output-type "Recovered-TS1: " output-print length Recovered-TS1
 
-to go
+  output-type "TS2 Deceased in Queue: " output-print length Decd-Queue-TS2
+  output-type "TS3 Deceased in Queue: " output-print length Decd-Queue-TS3
 
-  if ticks >= 60 and ticks <= 7200[
+  output-type "TS2 Deceased in Stabilisation: " output-print length Decd-stabilise-TS2
+  output-type "TS3 Deceased in Stabilisation: " output-print length Decd-stabilise-TS3
 
-    ask resc-agents with [Mode = "Searching !!!"][
-      ifelse count pop-agents with [targeted? = False and deceased? = False] != 0[ ; stops search function if there are no pop-agents left
-      ;radius-search
-        if target-agent = nobody[
-          setup-munkres
-        ]
-      ]
-      ;else statement: if pop-agents are zero
-      [
-        set mode "Return to PMA"
-        ;set label Mode
+  output-type "TS2 Deceased in Burn Beds: " output-print length Decd-BB-TS2
+  output-type "TS3 Deceased in Burn Beds: " output-print length Decd-BB-TS3
 
-      ]
-      if target-agent != nobody and is-pop-agent? target-agent[
-        set color [color] of target-agent
-        set Mode "Find Path"
-        ;set label Mode
-      ]
-    ]
+  output-type "TS2 Deceased in Non Burn Beds: " output-print length Decd-NBB-TS2
+  output-type "TS3 Deceased in Non Burn Beds: " output-print length Decd-NBB-TS3
 
-   ;***************************************************************************************************** FIND PATH
-  ask resc-agents with [Mode = "Find Path"][
-    find-path
-    ifelse commute-path != False and length commute-path > 1 [
-      set Mode "Active"
-      ;set label Mode
-    ]
-    [
-      ;else statement: Containing two if statements
-      if commute-path = False [
-        output-print "ERROR THERE IS NO COMMUTE PATH FOR RESC OR AMBULANCE AGENTS"
-      ]
-      if length commute-path = 1[
-        set Mode "Rescuing !!!"
-        output-print "Two agents on same Node satisfied"
-      ]
-    ]
-  ]
+  output-type "TS2 Deceased in Hospital Queue: " output-print length Decd-Hosp-Q-TS2
+  output-type "TS3 Deceased in Hospital Queue: " output-print length Decd-Hosp-Q-TS3
 
-    ;************************************************************************************************** TRAVEL TO PMA
-  ask resc-agents with [Mode = "Travel to PMA"][
-    ifelse current-node = node-agent-at and is-PMA? target-agent[
-      set Mode "At PMA"
-      set color violet
-      set rescue-time 10
-    ]
-    [
-      set color green
-      follow-path
-    ]
-  ]
+  output-type "TS2 Deceased while Awaiting Rescue: " output-print length Decd-AwaResc-TS2
+  output-type "TS3 Deceased while Awaiting Rescue: "output-print length Decd-AwaResc-TS3
 
-    ;****************************************************************** TRANSFERING AGENTS TO QUEUE OR STABILISATION
-  ask resc-agents with [Mode = "At PMA"][
-    Time-to-Transfer
-    if transfer-time = 0
-    [
-      set label ""
-      move-to-queue-or-stabilise
+  output-type "TS2 Deceased while on Route to PMA: " output-print length Decd-OnRout-PMA-TS2
+  output-type "TS3 Deceased while on Route to PMA: " output-print length Decd-OnRout-PMA-TS3
 
-      ifelse count pop-agents with [targeted? = false] != 0[
-        ;At PMA check if there are any pop-agents who havent been targeted
-        set Mode "Searching !!!"
-        set transfer-time transfer-time-mins
-        set target-agent nobody
-      ]
-      [
-        ;else statement: If there are no pop-agents left dont do anything
-        set Mode "Return to PMA"
-        ;set label Mode
-      ]
-    ]
-  ]
+  output-type "TS2 Deceased while on Route to hospital: " output-print length Decd-OnRout-Hosp-TS2
+  output-type "TS3 Deceased while on Route to hospital: " output-print length Decd-OnRout-Hosp-TS3
+
+  output-type "Total Deceased : " output-print (length Decd-Queue-TS2 + length Decd-Queue-TS3 + length Decd-stabilise-TS2 + length Decd-stabilise-TS3 + length Decd-BB-TS2 + length Decd-BB-TS3 + length Decd-NBB-TS2 + length Decd-NBB-TS3 + length Decd-Hosp-Q-TS2 + length Decd-Hosp-Q-TS3 + length Decd-AwaResc-TS2 + length Decd-AwaResc-TS3 + length Decd-OnRout-PMA-TS2 + length Decd-OnRout-PMA-TS3 + length Decd-OnRout-Hosp-TS2 + length Decd-OnRout-Hosp-TS3)
+
+end
 
 
+;Agentset
+to print-count-agents
+  output-print "Agents on route to PMA : " output-print count pop-agents-on patches with [pcolor = 125]
 
-    ;********************************************************************************** RESCUE / TIME TO COLLECT AGENT
+  output-type "Agents in VH Queue : " output-print count pop-agents-on patches with [pcolor = 55]
+  output-type "Agents in SM Queue : " output-print count pop-agents-on patches with [pcolor = 54]
+  output-type "Agents in VH Stabilisation : " output-print count pop-agents-on patches with [pcolor = 63]
+  output-type "Agents in SM Stabilisation : " output-print count pop-agents-on patches with [pcolor = 64]
 
-  ask resc-agents with [Mode = "Rescuing !!!"][
-   Time-to-Rescue
-    if rescue-time = 0[
-      collect-agent
-      set label ""
-      ifelse (length Rescued-agents-list = resc-agent-capacity) or (count pop-agents with [deceased? = False and awaiting-rescue? = False] = 0)[
-         set Mode "Return to PMA"
-        ]
-        [
-        set rescue-time rescue-time-mins
-        set Mode "Searching !!!"
-        ]
-      ]
-  ]
+  output-type "Agents on route to Hospital (Ambulance) : " output-print count pop-agents-on patches with [pcolor = 25]
+  output-type "Agents on route to Hospital (Helicopter) : " output-print count pop-agents-on patches with [pcolor = 34]
 
-     ;*********************************************************************************************** FIND CLOSEST PMA
-  ask resc-agents with [Mode = "Return to PMA"][
-    return-PMA
-    find-path
-    set Mode "Travel to PMA"
-  ]
+  output-type "Agents in hospital queue : " output-print count pop-agents-on patches with [pcolor = 84]
+  output-type "Agents in Non Burn Beds : " output-print count pop-agents-on patches with [pcolor = 95]
+  output-type "Agents in Burn Beds : " output-print count pop-agents-on patches with [pcolor = 94]
 
-  ;**************************************************************************************************** FOLLOW PATH
-  ask resc-agents with [Mode = "Active"][
-    follow-path
-    if (current-node = node-agent-at)[
-      ifelse (is-pop-agent? target-agent) and (length rescued-agents-list < resc-agent-capacity)[
-          set Mode "Rescuing !!!"
+  output-type "Agents Deceased : " output-print count pop-agents-on patches with [pcolor = 4]
+  output-type "Recovered-TS1 : " output-print count pop-agents-on patches with [pcolor = 14]
 
-        ]
-        [
-          ;else statement: if the agent has died
-          set Mode "Searching !!!"
-        ]
-    ]
-  ]
-
-  ;**************************************************************************************************  RESCUE ENDED
-  ask resc-agents with [Mode = "Rescue Ended"][
-    set list-of-time fput 1 list-of-time
-  ]
-  ;####################################################################################################### HELICOPTER RESCUE
-    if helicopter-rescue = True [
-      ask heli-agents with [Mode = "Searching !!!"][
-        ifelse count pop-agents with [(TS = 2 or TS = 3) and targeted? = False and deceased? = False] != 0[
-          if target-agent = nobody[
-            setup-munkres-heli
-          ]
-        ]
-        [
-          ;Else statement: if there are bo TS2 or TS3 agents to rescue anymore,
-          ;Helicopter already at site and have already rescued more than one agent: go to hospital
-          ifelse length Rescued-agents-list > 0 [
-            set Mode "Return to Hospital"
-            set target-agent one-of hospitals
-            set patch-agent-at hospital-patch
-          ]
-          ;Helicopter at hospital but no agents to rescue: go to helipad
-          [
-            set Mode "Return to Helipad"
-            move-to helipad-patch
-            set current-patch helipad-patch
-            set target-agent nobody
-            set patch-agent-at nobody
-          ]
-        ]
-
-        if target-agent != nobody and is-pop-agent? target-agent[
-          set Mode "Active"
-        ]
-      ]
-      ask heli-agents with [Mode = "Active"][
-        follow-path-heli
-    if current-patch = patch-agent-at[
-      set Mode "Rescuing !!!"
-    ]
-  ]
-  ask heli-agents with [Mode = "Rescuing !!!"][
-    time-to-rescue
-    if rescue-time = 0[
-      collect-agent
-      ifelse (length Rescued-Agents-List) =  Helicopter-capacity[
-        set Mode "Return to Hospital"
-        set target-agent one-of hospitals
-        set patch-agent-at hospital-patch
-        set Rescue-time Rescue-time-mins
-      ]
-      [
-        set Mode "Searching !!!"
-        set Rescue-time Rescue-time-mins
-      ]
-        ]
-      ]
-      ask heli-agents with [Mode = "Return to Hospital"][
-        follow-path-heli
-        if is-hospital? target-agent and current-patch = patch-agent-at[
-          set Mode "At Hospital"
-        ]
-      ]
-      ask heli-agents with [Mode = "At Hospital"][
-        Time-to-transfer
-        if transfer-time = 0[
-          identify-TS2-TS3-Heli
-          select-bed-type
-          reset-lists-variables-heli
-          set Mode "Searching !!!"
-        ]
-      ]
-    ]
-
-  ;######################################################################################################
-
-
-
-  ;************************* SETUP PMA CAPACITY, TRANSFERING AGENTS FROM QUEUE TO AT STABILISATION, REMOVING DEAD AGENTS
-
-  ask PMA's [
-    setup-PMA-capacity
-    renew-PMA-lists ; this is for removeing deceased agents
-    move-from-queue-stabilise
-    TS1-recovered
-    transfer-to-ambulance
-  ]
-
-  ;****************************************************************************************** FIND HOSPITAL
-  ask ambulances with [Mode = "Active"][
-    set Transfer-time Transfer-time-mins
-    find-hospital
-  ]
-  ;***************************************************************************************** HOSPITAL COMMUTE PATH
-  ask ambulances with [Mode = "Find Commute Path"][
-    print "Finding commute path"
-    find-path
-    Time-To-Transfer
-    if transfer-time = 0[
-    set Mode "Travel to Hospital"
-    set transfer-time transfer-time-mins
-    ]
-  ]
-  ;***************************************************************************************** TRAVEL TO HOSPITAL
-  ask ambulances with [Mode = "Travel to Hospital"][
-    follow-path
-    if (current-node = node-agent-at)[
-      Time-to-Transfer
-      set label ""
-      if Transfer-Time = 0[
-      select-bed-type
-      die
-      ]
-    ]
-  ]
-  ;***************************************************************************************** MOVE AGENTS FROM NON BURN BEDS TO BURN BEDS
-  ask hospitals[
-    renew-hospital-lists
-    from-non-to-burn-beds
-    from-Hospital-Queue-to-Non-Burn-Beds
-  ]
-
-  ;***************************************************************************************** TIME UPDATE FUNCTIONS
-    ask resc-agents with [Mode = "Rescue Ended"][
-    set list-of-time fput 1 list-of-time
-  ]
-  let time-since-eruption 60
-  set avg-time time-since-eruption + (sum [sum list-of-time] of resc-agents) / count resc-agents
-  ]
-
-  ;**************************************************************************************** Update ticks
-  if ticks >= 0 and ticks <= 7200 [
-  tick
-
- ;***************************************************************************************** TO APPLY MORTALITY RATES AND REMOVE AGENTS
-    apply-mortality-rates
-    ask resc-agents [renew-resc-list]
-    ask ambulances [renew-ambulance-list]
-    ask PMA's [renew-pma-lists]
-    ask hospitals [renew-hospital-lists]
-    ask heli-agents[renew-helicopter-list]
-  ]
 end
