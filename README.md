@@ -1,3 +1,3 @@
 # Casualty Rescue Transport and Treament Model
 
-![](images/CRTT.gif)
+![](images/CRTT_model.gif)
