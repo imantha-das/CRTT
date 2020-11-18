@@ -11,6 +11,7 @@
 * [How to use it?](#how-to-use-it)
 * [Things to notice or try](#things-to-notice-or-try)
 * [Resources](#resources)
+* [code](#code)
 
 
 ## What is it?
@@ -288,6 +289,9 @@ The model measures the impact on casualty survivability through examining the nu
 * To familarise with Netlogo programming language its highly recommended to follow the 3 tutorials provided by Netlogo. They can be found at, https://ccl.northwestern.edu/netlogo/docs/ (under learning Netlogo).
 * Programming guide : https://ccl.northwestern.edu/netlogo/docs/
 * Netlogo Primitives (Functions) : https://ccl.northwestern.edu/netlogo/docs/
+
+## Code
+* To be added to repository upon completion of project/paper published
   
 
 
