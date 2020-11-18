@@ -40,11 +40,11 @@ The model measures the impact on casualty survivability through examining the nu
 
 #### Type of agents and their attributes
 
-![alt text](https://github.com/vharg/RTT/blob/master/images/parameters.PNG)
+![alt text](images/parameters.PNG)
 
 #### Rescue operation procedure
 
-![alt text](https://github.com/vharg/RTT/blob/master/images/rescue%20procedure.PNG)
+![alt text](images/rescue%20procedure.PNG)
 
 ## Model Specifics
 * Casualties are classified into 3 categories and distinguished by the trauma scale attribute(TS). The trauma scales is defined as combination of the severity  of injuries (Total Body Surface Area - TBSA) and mortality
