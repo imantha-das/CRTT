@@ -1,6 +1,8 @@
 # Casualty Rescue Transport and Treament Model
 
-![](images/CRTT_2_low_res.gif = 400x400)
+<p align="center">
+  <img src="images/CRTT_2_low_res.gif" alt="animated" />
+</p>
 
 ## Table of Contents
 * [What is it?](#what-is-it)
