@@ -1,4 +1,7 @@
-# Casualty Rescue Transport and Treament Model
+
+
+<h1>Casualty Rescue Transport and Treament Model <p align=center></h1>
+
 
 <p align="center">
   <img src="images/CRTT_2_low_res.gif" alt="animated" />
