@@ -11,9 +11,9 @@
 * [What is it?](#what-is-it)
 * [How it works?](#how-it-works)
 * [Model](#model)
-  * [Versions] (#versions)
-  * [Agent And Their Functions] (#agents-and-their-functions)  
-  * [Assumptions](#agent-functions-and-assumptions)
+  * [Versions](#versions)
+  * [Agents](#agents)  
+  * [Assumptions](#assumptions)
   * [Model Limitations](#model-limitations)
 * [How to setup?](#how-to-setup)
 * [How to use it?](#how-to-use-it)
@@ -24,7 +24,7 @@
 ## What is it?
 The Casualty Rescue Tratment and Transport (CRTT) is an Agent Based Simulation model developed by the Volcanic Risk and Hazard Group at the Earth Observatory of Singapore. It simulates the rescue, treatment and transportation of casualties during a hypothetical eruption of La Grande Soufrière volcano, located in the island of Gudaloupe. The model aims to identify critical medical response parameters that affect casualty survivability.
 
-#### Parameters available by the model
+### Parameters available by the model
 * Number of rescuers
 * Speed of rescuers
 * Transportation capacity
@@ -47,7 +47,7 @@ The model simulates evacuation scenarios following a volcanic crisis, and explor
 
 ## Model
 
-#### Versions
+### Versions
 
 There are two models located in vharg/Post-eruption-casualty-RTT/model repository
 
@@ -69,9 +69,9 @@ Unlike Vesion 1.0 of the model, Version 2.0 allows two main modes of running the
   * Resc-Agent-A : Impact zone <--> PMA (travels both ways, limited number of agents)
   * Resc-Agent-B : PMA <--> Hospital (travels both ways, limited number of agents)
 
-#### Agents And Their Functions
+### Agents
 
-This section provides a summary of the different agent types used in this model and there functions.
+This section provides a summary of the different agents used in this model and there functions.
 
 **Casualties (Refered to as Cas-Agent in the model)**
 Casualties (**cas-agent**) are classified into 3 categories and distinguished by the trauma scale attribute (**TS**). The trauma scales is defined as combination of the severity  of injuries (Total Body Surface Area - TBSA) and mortality.
@@ -81,55 +81,49 @@ Casualties (**cas-agent**) are classified into 3 categories and distinguished by
 * TS3 (Red) : Burn wounds > 40% TBSA, High mortality with or without treatment
 
 **Rescuers (Refered to as Rescue-Agent-A, Rescue-Agent-B, Heli-Agent in the model)**
-Main functions of rescuers are to rescue casualties and transport casualties from impact zone to medical facilities. As mentioned above there are two ways the model can be run, using either a single rescuer (**Resc-Agent-A**) or two (**Resc-Agent-A & Resc-Agent-B**). Helicopters (**Heli-Agent**) can be added into the model to speed up rescuing process.
+Main functions of rescuers are to rescue casualties and transport casualties from impact zone to medical facilities. As mentioned above there are two ways the model can be run, using either a single rescuer (**Resc-Agent-A**) or two (**Resc-Agent-A & Resc-Agent-B**). 
 
 * Single rescuer only
   * Performs rescue operation in impacted zone (TS1, TS2 and TS3) as well as transporting stabalised casualties (TS2 and TS3) from field triage (PMA) to hospitals for treatment.
 * Two rescuers (Type-A and Type-B)
-  * Type-A resuers perform rescue operation (TS1, TS2 and TS3) at impaczone and transporting to casualties while Type-B rescuers transport stabalised casualties (TS2 and TS3) from PMA to hospital for treatment.  
-* Helicopters
-  * Rescue TS2 and TS3 casualties from impactzone and transport them to PMA.
+  * Type-A resuers perform rescue operation (TS1, TS2 and TS3) at impactzone and transporting to casualties to PMA (field triage) while Type-B rescuers transport stabalised casualties (TS2 and TS3) from PMA to hospital for further medical treatment. 
+
+Additionally helicopters (**Heli-Agent**) can be added into the model which will aid in the rescuing process. Note that the helicopters only transort agent between the impact zone and PMA and they also only rescue more critical causualties (TS2 and TS3).
 
 **Medical Faciilies : Field Traige and PMA (Refered to as PMA's and hospitals in the model)**
-PMA (Field triage) performs stabalising of casualties (TS1, TS2 and TS3) to assist casualties suffering from airway (breathing) problems due to thermal inflammation. Stabalised casualties are transported to hospitals where there receive further medical treatment. There are two medical facilites that are setup, one at Sainte Marie (SM-PMA) and other at Vieux Habitants (VH-PMA) while the hospital is located in Point Pitre.
+At the PMA (Field triage) stabalising is performed on casualties to alleviate suffering from airway (breathing) problems due to thermal inflammation. STabalising is perfomed on all casualties (TS1, TS2 and TS3). Once stabalised casualties (Only TS2 and TS3) are transported to hospitals where there receive further medical treatment. There are two field triages (PMA) that are setup, in Sainte Marie (SM-PMA) and other at Vieux Habitants (VH-PMA) while the hospital is located in Point Pitre.
 
-#### Assumptions
+### Assumptions
 
-This section of the model describe the assumption taken for each category of agents.
+This section lists the assumption taken by the model and are described according to agent categories
 
-**Resc-Agent-A (white with red cross)**
+**Resc-Agents(A/B)**
 
-* If only single rescuer
-    * For rescue operations : 
-      * Transports all casualties (Trauma scale 1,2 & 3). Its assumed that it is not possible to distinguish between TS2 and TS3 casualties and hence a joint priority towrds rescuing will be given to TS2 and TS3 casulties over TS1. Only upon rescuing all TS2 and TS3 casualties will TS1 casualties be rescued. Note that this means that even if a TS1 casualties is found in the same location (node) as TS2, they will be ignored till all TS2 and TS3 are rescued.
-    * For transporting operations (PMA -> Hospital) : 
-      * Transports only casualties with Trauma scale 2 or 3 as they Trauma scale 1 casualties do not require further treatment. While transporting casualities from PMA to hospital, TS2 casualties will be given higher priority over TS3 casualties as they are more likely to survive.
-      * Casualties who are stabalised at earlier time ranges are given more priority and hence works on First-in First-out basis (FIFO). 
-        * For example if there 4 casualties (TS3-A @t1, TS2-A @t2, TS3-B @t3, TS2-B @t4) who are stabilised
-          * Where t refers to stabalising time and t1 < t2 <t3 < t4. In other words TS3-A was first to be stabilised
-          * If a rescuers has capacity of 2 (Max 2 agents can be transported), TS2-A and TS2-B will be selected over TS3-A since TS2 agents are given more preference.
-          * If a rescuer has a capacity of 3 (Max 3 agents can be transported), TS2-A, TS2-B & TS3-A will be selected to be transported to hospital.
-          
-* If two rescuers (Resc-Agent-A & Resc-Agent-B)
-  * Resc-Agent-A  
-    * Performs rescue operations in the impacted zone. Responsible for transporting casualties from field to PMA (Triage - Feild hospital).
-    * Similar to single rescuer, TS2 and TS3 casualties are given preference duing rescue operations
-           
-  * Resc-Agent-B
-    * Performs transporting casualties from PMA to hospital.
-    * Transports only casualties with trauma scale 2 & 3, as TS1 casualties dont require further treatment
-    * Similar to a single rescuer, TS2 casualties will be given priority over TS3 casualties during transportation to hospital.
+The following are general assumptions apply to all rescuers.
+* Rescuers travel at a constant speed on all roads.
+* On occassions where casualties die during transit, rescuers will not return to impactzone for further rescuing or to PMA to collect new casualties to be transported to hospital. So for instance if a rescuer was transporting 2 casualties from PMA to the hospital, and if one or both casualties die during transit, the rescuer will not go back to the PMA to collect more casualties. Rather it would reach its destination (hospital) and make further decision at that point.
+* Rescuers make decisions after completing tasks (i.e once they reach PMA, hospital and rescued a casualties at impact zone)
+* To avoid multiple rescuers attempting to rescue the same agent, this model heavily relies on a targeting mechanism. Each rescuer before commencing the rescue operation will target the casualty they are attempting to rescue at the PMA (mode 1 and 2) or hospital (for mode 1). Hence it is assumed in this model that the locations of casualties are know prior to reaching the impact zone.
 
-* Helicopters
-  * Transports casualties from impacted zones to PMA
-  * Only Transports casualties with trauma scale 2 & 3.
-  * Note that helicopters do not rescue TS1 casualties, and as previously discussed TS2 and TS3 casualties will be given equal priority when rescuing as they cannot be distinguished at impact zone.
 
-* The following are general rules / assumptions apply to all rescuers in both modes (mode 1 / mode 2)
-  * Rescuers are assigned tasks after completing a specific tasks and will continue to perform assigned tasks until they are completed.
-  * Building on the previous point, rescuers decide to travel to PMA based on queue lengths (in more detail in section Medical Facilities : Field triage / PMA) and once a PMA is selected, they would not change course to travel to another PMA even if queue length are changed.
-  * Similar to the previous point rescuer will not travel back to impact zone to collect agent if a casualty dies whilst on their way to a PMA.
-  * The above stated point applies when casualties are transfered to hospitals.
+These assumptions stated below only apply for mentioned operations
+* For rescue operations (Impactzone -> PMA): 
+  * Its assumed that it is not possible to distinguish between TS2 and TS3 casualties and hence a joint first priority will be given towards rescuing TS2 and TS3 casulties followed by TS1. 
+  * Only upon rescuing all TS2 and TS3 casualties will TS1 casualties be rescued. (Note that this means that even if a TS1 casualties is found in the same location (node) as TS2, they will be ignored till all TS2 and TS3 are rescued.)
+  * Rescuers select which PMA (Vieux Habitants / Sainte Marie) to travel to based on certain conditions which are detailed under Medical Facilities : Field triage / PMA
+  
+* For transporting operations (PMA -> Hospital) : 
+  * When transporting casualities from PMA to hospital, TS2 casualties will be given higher priority over TS3 casualties as they are more likely to survive.
+  * Casualties who are stabalised at earlier time ranges are given more priority and hence works on First-in First-out basis (FIFO). 
+    * For example if there 4 casualties (TS3-A @t1, TS2-A @t2, TS3-B @t3, TS2-B @t4) who are stabilised
+      * Where t refers to stabalising time and t1 < t2 <t3 < t4. In other words TS3-A was first to be stabilised
+      * If a rescuers have a capacity of 2 (Max 2 agents can be transported), TS2-A and TS2-B will be selected over TS3-A since TS2 agents are given more preference.
+      * If a rescuer has a capacity of 3 (Max 3 agents can be transported), TS2-A, TS2-B & TS3-A will be selected to be transported to hospital.
+
+* For mode 1 (only a single rescuer - type A), when the number of casualties awaiting hospital transfer reaches a certain threshold, rescuers will begin to transport casualties at the PMA to hospital until that number falls below the defined threshold. For instance if the defined threshold is 10 and there are 14 casualties awaiting hospital transfer, 2 rescuers will transport 4 of the casualties to hospital before returning bact to impact zone for rescuing (we assuming eaches rescuer can transport 2 casualties at a time).
+* For mode 1 (only a single rescuer - type A), once all TS2 and TS3 casualties are rescued from the impact zone, the rescuers will start transport all remaining casualties at PMA to hospital before commencing rescue operation of TS1 casualities.
+  * Saying this note that due to the earlier discussed targeting mechanism there might be rescuers who have already targeted TS1 casualties since all TS2 or TS3 casaulties are not rescued at impact zone. In this case they will transport the targeted TS1 casualties before transporting TS2 or TS3 casualties at PMA to hospital.  
+* For mode 2 where there are 2 different types of rescue agents, there are occasions where a certain PMA might be under utilised (as all/most casualties taken to closer PMA or lower queue by type A rescuers). On these instance there might be type B rescuers who are inactive for long durations (as there is nocasualties to be transported to hospital). To account for this type B rescuers will travel from one PMA to the other (more active) to transport available casualties at that PMA.
     
 **Medical Facilities : Field triage / PMA**
 
@@ -182,8 +176,8 @@ This section of the model describe the assumption taken for each category of age
     
 * Rescuers (Ambulance Type - B)
   * All points Rescuers, Ambulance Type - A apply to Ambulance Type-B as well.
-  * Travel only in one direction, from PMA to Hospital. They do not return to PMA after transferring patients to the hospital.
-  * Its considered that there are unlimited number of Ambulances (Type B)
+  * Travel only in one direction, from PMA to Hospital. They do not return to PMA after transferring patients to the hospital (only for **version 1** of the model).
+  * Its considered that there are unlimited number of Ambulances (only for **version 1** of the model - type B recuers).
   * Travels to hospital as soon as there are any stabilised casualties at the PMA (Do not wait for other casualties to be stabilised since there are an unlimited number of ambulances) 
 
 * Rescuers (Helicopters)
@@ -207,6 +201,7 @@ This section of the model describe the assumption taken for each category of age
 ## How to setup?
 
 #### Netlogo
+
 * The netlogo application is required for you to run the model.
 * Download and install Netlogo version 6.1.0 
   * https://ccl.northwestern.edu/netlogo/download.shtml
