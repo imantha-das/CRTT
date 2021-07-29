@@ -11,7 +11,9 @@
 * [What is it?](#what-is-it)
 * [How it works?](#how-it-works)
 * [Model](#model)
-  * [Agent Functions and Assumptions](#agent-functions-and-assumptions)
+  * [Versions] (#versions)
+  * [Agent And Their Functions] (#agents-and-their-functions)  
+  * [Assumptions](#agent-functions-and-assumptions)
   * [Model Limitations](#model-limitations)
 * [How to setup?](#how-to-setup)
 * [How to use it?](#how-to-use-it)
@@ -31,8 +33,9 @@ The Casualty Rescue Tratment and Transport (CRTT) is an Agent Based Simulation m
 * Distruption to road network
 
 ## How it works?
-The model is a gis based network model where input data (road network and location of medical facilities and other infrastructure) are input in the form of gis shape files. These geospatial data (geometric points and polyline) are replicated by the model as links and nodes while casualties, rescuers and medical facilites are represented as autonomous agents that are capbale of interacting with each other to obtain various outcomes.  The links and nodes allow the rescuers (agents) to travese through the network to transport casulties (agents) from the impact zones to medical facilites where they would be treated.
-The model simulates evacuation scenarios following a volcanic crisis, and explores the impact on casualty survivability using an agent based modelling approach in a GIS setting. In a similar manner the helicopters traverse across the model space using grid based system
+The model was created using Netlogo Agent Based Modelling framework and is a gis based network model where input data (road network and location of medical facilities and other infrastructure) are input in the form of gis shape files `(.shp)`. These geospatial data (geometric points and polyline) are replicated by the model as links and nodes while casualties, rescuers and medical facilites are represented as autonomous agents that are capbale of interacting with each other to obtain various outcomes.  The links and nodes allow the rescuers (ambulances) to travese through the network to transport casulties (agents) from the impact zones to medical facilites where they would be treated. In a similar manner the helicopters traverse across the model space using grid based system (in netlogo terminology refered to as `patches`)
+
+The model simulates evacuation scenarios following a volcanic crisis, and explores the impact on casualty survivability under different conditions (availability of resources, staff, infastructure) using an agent based modelling approach in a GIS setting. 
 
 #### Type of agents and their attributes
 
@@ -43,6 +46,8 @@ The model simulates evacuation scenarios following a volcanic crisis, and explor
 ![alt text](images/rescue%20procedure.PNG)
 
 ## Model
+
+#### Versions
 
 There are two models located in vharg/Post-eruption-casualty-RTT/model repository
 
@@ -64,24 +69,37 @@ Unlike Vesion 1.0 of the model, Version 2.0 allows two main modes of running the
   * Resc-Agent-A : Impact zone <--> PMA (travels both ways, limited number of agents)
   * Resc-Agent-B : PMA <--> Hospital (travels both ways, limited number of agents)
 
-### Agent Functions and Assumptions
+#### Agents And Their Functions
 
 This section provides a summary of the different agent types used in this model and there functions.
 
-#### Casualties 
+**Casualties (Refered to as Cas-Agent in the model)**
 Casualties (**cas-agent**) are classified into 3 categories and distinguished by the trauma scale attribute (**TS**). The trauma scales is defined as combination of the severity  of injuries (Total Body Surface Area - TBSA) and mortality.
 
 * TS1 (yellow) : Low injuries, Low mortality
 * TS2 (orange) : Burn wounds 20-40% TBSA, High mortality without treatment
 * TS3 (Red) : Burn wounds > 40% TBSA, High mortality with or without treatment
 
-#### Rescuers (Refered to as Rescue-Agent-A, Rescue-Agent-B, Heli-Agent)
+**Rescuers (Refered to as Rescue-Agent-A, Rescue-Agent-B, Heli-Agent in the model)**
 Main functions of rescuers are to rescue casualties and transport casualties from impact zone to medical facilities. As mentioned above there are two ways the model can be run, using either a single rescuer (**Resc-Agent-A**) or two (**Resc-Agent-A & Resc-Agent-B**). Helicopters (**Heli-Agent**) can be added into the model to speed up rescuing process.
+
+* Single rescuer only
+  * Performs rescue operation in impacted zone (TS1, TS2 and TS3) as well as transporting stabalised casualties (TS2 and TS3) from field triage (PMA) to hospitals for treatment.
+* Two rescuers (Type-A and Type-B)
+  * Type-A resuers perform rescue operation (TS1, TS2 and TS3) at impaczone and transporting to casualties while Type-B rescuers transport stabalised casualties (TS2 and TS3) from PMA to hospital for treatment.  
+* Helicopters
+  * Rescue TS2 and TS3 casualties from impactzone and transport them to PMA.
+
+**Medical Faciilies : Field Traige and PMA (Refered to as PMA's and hospitals in the model)**
+PMA (Field triage) performs stabalising of casualties (TS1, TS2 and TS3) to assist casualties suffering from airway (breathing) problems due to thermal inflammation. Stabalised casualties are transported to hospitals where there receive further medical treatment. There are two medical facilites that are setup, one at Sainte Marie (SM-PMA) and other at Vieux Habitants (VH-PMA) while the hospital is located in Point Pitre.
+
+#### Assumptions
+
+This section of the model describe the assumption taken for each category of agents.
 
 **Resc-Agent-A (white with red cross)**
 
 * If only single rescuer
-  * Performs rescue operation in impacted zone as well as transporting casualties from field triage (PMA) to hospitals for treatment.
     * For rescue operations : 
       * Transports all casualties (Trauma scale 1,2 & 3). Its assumed that it is not possible to distinguish between TS2 and TS3 casualties and hence a joint priority towrds rescuing will be given to TS2 and TS3 casulties over TS1. Only upon rescuing all TS2 and TS3 casualties will TS1 casualties be rescued. Note that this means that even if a TS1 casualties is found in the same location (node) as TS2, they will be ignored till all TS2 and TS3 are rescued.
     * For transporting operations (PMA -> Hospital) : 
@@ -114,7 +132,7 @@ Main functions of rescuers are to rescue casualties and transport casualties fro
   * The above stated point applies when casualties are transfered to hospitals.
     
 **Medical Facilities : Field triage / PMA**
-There are two medical facilites that are setup, one at Sainte Marie (SM-PMA) and other at Vieux Habitants (VH-PMA). At PMA casualties will be stabalised to assist casualties suffering from airway (breathing) problems due to thermal inflammation. 
+
   * Performs stabilisation for casualties of trauma scale categories 1,2,3
   * Capacity of casualties that can be treated at one time is decided by the number of medical staff available.
   * If Stabilisation capacity is reached casualties will be added into queue.
@@ -135,7 +153,6 @@ There are two medical facilites that are setup, one at Sainte Marie (SM-PMA) and
     * If stabilisation queue isnt open (Usually till the first hour or when there are no doctors) or full, casualties will be added into the queue. 
  
 **Medical Facilities : Hospital**
-  * Provides treatment for casualties with Trauma scale 2 and 3.
   * Medical equipment
     * Burn Beds (BB)
       * casualties who are offered burn beds will have reduced  mortality rate
