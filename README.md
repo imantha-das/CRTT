@@ -10,39 +10,29 @@
 ## Table of Contents
 * [What is it?](#what-is-it)
 * [How it works?](#how-it-works)
-* [Model Specifics](#model-specifics)
-* [Model Assumptions and Limitations](#model-assumptions-and-limitations)
+* [Model](#model)
+  * [Agent Functions and Assumptions](#agent-functions-and-assumptions)
+  * [Model Limitations](#model-limitations)
 * [How to setup?](#how-to-setup)
 * [How to use it?](#how-to-use-it)
 * [Things to notice or try](#things-to-notice-or-try)
 * [Resources](#resources)
 * [code](#code)
 
-
 ## What is it?
-The speed at which emergency services respond following a volcanic eruption plays a vital role in determining the survivability of casualties. Residents in impacted zones exposed to a pyroclastic density current will suffer severe burns and will require intensive treatment and care. However most hospitals have very limited capacity to treat burn victims and therefore the management of casualties can have a large impact on their survivability. Mitigation plans need to be enforced to enable swift access to vital equipment such as ventilators.
+The Casualty Rescue Tratment and Transport (CRTT) is an Agent Based Simulation model developed by the Volcanic Risk and Hazard Group at the Earth Observatory of Singapore. It simulates the rescue, treatment and transportation of casualties during a hypothetical eruption of La Grande Soufrière volcano, located in the island of Gudaloupe. The model aims to identify critical medical response parameters that affect casualty survivability.
 
-This model will use an Agent-Based-Modelling approach to quantify the impact of casualty rescue and treatment on casualty survivability. The selected study area is the island of Guadeloupe, where the populated area of Basse Terre and Saint Claude are in close proximity to volcano La Soufrière.
-
-#### What affects casualty survivability ?
-* Severity of injuries
-* Age and health conditions
-* Time to recieve medical treatment
-* Overloading at hospitals
-* Modes of rescue (helicopter / ambulance)
-* Location of treatment facilities
-* Damage to transportation systems
-* Availability of medical equipment
-* Area of Impact : Number of casualties affected
+#### Parameters available by the model
+* Number of rescuers
+* Speed of rescuers
+* Transportation capacity
+* Modes of transportation (helicopter / ambulances)
+* Availability of staff and equipment at medical facilites
+* Distruption to road network
 
 ## How it works?
-The model simulates evacuation scenarios following a volcanic crisis, and explores the impact on casualty survivability using an agent based modelling approach in a GIS setting. The effects on casualty survivability is explored through different scenario testing where different parameters are varied to examine their impact.
-
-Rescuers, casualties, medical facilities and other infrastructure are modeled as either stationary or active agents (moves across the netlogo space). To allow rescuers to travel, to and from medical facilities to impacted zones, a shapefile consisiting of the transport infrastructure is input into the model. The model converts polylines and polyline intersecting points to links and nodes respectively. This allows agents (rescuers) to travel from node to node till they reach their destination. Helicopters are allowed to move across the space using patches which is square grid with x, y coordinates that is included within the netlogo interface. All agents (casualties, rescures & medical facilities) are situated in the closest node from their input location (GIS lat/lon coordinate).
-
-The overal time passed since eruption is measured using ticks which corresponds to a minute in real life.
-
-The model measures the impact on casualty survivability through examining the number of casualties deceased within a specific time or at the end of simulation. Actions such as casualties been transported to medical facilites faster or offered better medical equipment will redcue the morality rate thereby improving casualty survivability.
+The model is a gis based network model where input data (road network and location of medical facilities and other infrastructure) are input in the form of gis shape files. These geospatial data (geometric points and polyline) are replicated by the model as links and nodes while casualties, rescuers and medical facilites are represented as autonomous agents that are capbale of interacting with each other to obtain various outcomes.  The links and nodes allow the rescuers (agents) to travese through the network to transport casulties (agents) from the impact zones to medical facilites where they would be treated.
+The model simulates evacuation scenarios following a volcanic crisis, and explores the impact on casualty survivability using an agent based modelling approach in a GIS setting. In a similar manner the helicopters traverse across the model space using grid based system
 
 #### Type of agents and their attributes
 
@@ -52,58 +42,119 @@ The model measures the impact on casualty survivability through examining the nu
 
 ![alt text](images/rescue%20procedure.PNG)
 
-## Model Specifics
-* Casualties are classified into 3 categories and distinguished by the trauma scale attribute(TS). The trauma scales is defined as combination of the severity  of injuries (Total Body Surface Area - TBSA) and mortality
-  * TS1 (yellow) : Low injuries, Low mortality
-  * TS2 (orange) : Burn wounds 20-40% TBSA, High mortality without treatment
-  * TS3 (Red) : Burn wounds > 40% TBSA, High mortality with or without treatment
+## Model
 
-* Rescuers are classified in to 2 categories
-  * Ambulances
-    * Type-A (white with red cross) 
-      * Performs rescue operations in the impacted zone. Responsible for transporting casualties from field to PMA (Triage - Feild hospital).
-      * Transports all casualties (Trauma scale 1,2 & 3)
-      * Joint first priority rescue for casulaites of category TS2 and TS3. This means that even if there were TS1 casualties withtin the same node as TS2 or TS3 casualty, rescuers will ignore them and search for other TS2 and TS3 casualties provided they have capacity for further rescuing.
-      * TS1 casualties will only be rescued once all TS2 and TS3 casualties are rescued from the impacted zone.  
-    * Type-B (Red with white cross) 
-      * Performs transporting casualties from PMA to hospital.
-      * Transports only casualties with trauma scale 2 & 3
-  * Helicopters
-    * Transports casualties from impacted zones to hospital
-    * Only Transports casualties with trauma scale 2 & 3.
-    * They travel to and from hospital to the impact zone until all TS 2 and TS 3 casualties are rescued.
+There are two models located in vharg/Post-eruption-casualty-RTT/model repository
+
+* CRTT (Ver 1.0)
+* CRTT (Ver 2.0)
+
+Ver 1.0
+
+The main difference between the two are model are that Version 1.0 allows unlimited rescuers travelling between PMA (field triage) and hospital. As a result, the time required for casualties to recieve treatment is significantly lower (Since rescuers only travel one way from pma to hospital, they donot return back to the PMA). Also note for version 1 of the model, there are two types of rescuers who's functions are mentioned below.
+* Resc-Agent-A : Impact zone <--> PMA (travels both ways, limited number of agents)
+* Resc-Agent-B : PMA --> Hospital (travels one way, unlimited number of agents)
+
+Ver 2.0
+
+Unlike Vesion 1.0 of the model, Version 2.0 allows two main modes of running the model. The two modes differ primarily based on the functions performed by the rescuers.
+* Mode 1 : There is only a single rescuers (Resc-Agent-A) that travels to impact zone to rescue casualties and subsequently transport them to PMA and hospital for treatment 
+  * Resc-Agent-A : Impact zone <--> PMA <--> Hospital (travels both ways, limited number of agents)
+* Mode 2 : Allow two different types of rescue agents (Resc-Agent-A & Resc-Agent-B) similar to version 1 of the model. The main difference between version of and version 2 - mode 2 is that the number of rescuers traveling between PMA and Hospital are limited. As a result, unlike version 1, these agents travel back and forth from the PMA to hospital.
+  * Resc-Agent-A : Impact zone <--> PMA (travels both ways, limited number of agents)
+  * Resc-Agent-B : PMA <--> Hospital (travels both ways, limited number of agents)
+
+### Agent Functions and Assumptions
+
+This section provides a summary of the different agent types used in this model and there functions.
+
+#### Casualties 
+Casualties (**cas-agent**) are classified into 3 categories and distinguished by the trauma scale attribute (**TS**). The trauma scales is defined as combination of the severity  of injuries (Total Body Surface Area - TBSA) and mortality.
+
+* TS1 (yellow) : Low injuries, Low mortality
+* TS2 (orange) : Burn wounds 20-40% TBSA, High mortality without treatment
+* TS3 (Red) : Burn wounds > 40% TBSA, High mortality with or without treatment
+
+#### Rescuers (Refered to as Rescue-Agent-A, Rescue-Agent-B, Heli-Agent)
+Main functions of rescuers are to rescue casualties and transport casualties from impact zone to medical facilities. As mentioned above there are two ways the model can be run, using either a single rescuer (**Resc-Agent-A**) or two (**Resc-Agent-A & Resc-Agent-B**). Helicopters (**Heli-Agent**) can be added into the model to speed up rescuing process.
+
+**Resc-Agent-A (white with red cross)**
+
+* If only single rescuer
+  * Performs rescue operation in impacted zone as well as transporting casualties from field triage (PMA) to hospitals for treatment.
+    * For rescue operations : 
+      * Transports all casualties (Trauma scale 1,2 & 3). Its assumed that it is not possible to distinguish between TS2 and TS3 casualties and hence a joint priority towrds rescuing will be given to TS2 and TS3 casulties over TS1. Only upon rescuing all TS2 and TS3 casualties will TS1 casualties be rescued. Note that this means that even if a TS1 casualties is found in the same location (node) as TS2, they will be ignored till all TS2 and TS3 are rescued.
+    * For transporting operations (PMA -> Hospital) : 
+      * Transports only casualties with Trauma scale 2 or 3 as they Trauma scale 1 casualties do not require further treatment. While transporting casualities from PMA to hospital, TS2 casualties will be given higher priority over TS3 casualties as they are more likely to survive.
+      * Casualties who are stabalised at earlier time ranges are given more priority and hence works on First-in First-out basis (FIFO). 
+        * For example if there 4 casualties (TS3-A @t1, TS2-A @t2, TS3-B @t3, TS2-B @t4) who are stabilised
+          * Where t refers to stabalising time and t1 < t2 <t3 < t4. In other words TS3-A was first to be stabilised
+          * If a rescuers has capacity of 2 (Max 2 agents can be transported), TS2-A and TS2-B will be selected over TS3-A since TS2 agents are given more preference.
+          * If a rescuer has a capacity of 3 (Max 3 agents can be transported), TS2-A, TS2-B & TS3-A will be selected to be transported to hospital.
+          
+* If two rescuers (Resc-Agent-A & Resc-Agent-B)
+  * Resc-Agent-A  
+    * Performs rescue operations in the impacted zone. Responsible for transporting casualties from field to PMA (Triage - Feild hospital).
+    * Similar to single rescuer, TS2 and TS3 casualties are given preference duing rescue operations
+           
+  * Resc-Agent-B
+    * Performs transporting casualties from PMA to hospital.
+    * Transports only casualties with trauma scale 2 & 3, as TS1 casualties dont require further treatment
+    * Similar to a single rescuer, TS2 casualties will be given priority over TS3 casualties during transportation to hospital.
+
+* Helicopters
+  * Transports casualties from impacted zones to PMA
+  * Only Transports casualties with trauma scale 2 & 3.
+  * Note that helicopters do not rescue TS1 casualties, and as previously discussed TS2 and TS3 casualties will be given equal priority when rescuing as they cannot be distinguished at impact zone.
+
+* The following are general rules / assumptions apply to all rescuers in both modes (mode 1 / mode 2)
+  * Rescuers are assigned tasks after completing a specific tasks and will continue to perform assigned tasks until they are completed.
+  * Building on the previous point, rescuers decide to travel to PMA based on queue lengths (in more detail in section Medical Facilities : Field triage / PMA) and once a PMA is selected, they would not change course to travel to another PMA even if queue length are changed.
+  * Similar to the previous point rescuer will not travel back to impact zone to collect agent if a casualty dies whilst on their way to a PMA.
+  * The above stated point applies when casualties are transfered to hospitals.
     
-* PMA (triage / field hospital)
+**Medical Facilities : Field triage / PMA**
+There are two medical facilites that are setup, one at Sainte Marie (SM-PMA) and other at Vieux Habitants (VH-PMA). At PMA casualties will be stabalised to assist casualties suffering from airway (breathing) problems due to thermal inflammation. 
   * Performs stabilisation for casualties of trauma scale categories 1,2,3
-  * Two PMA's are setup one in Sainte Marie and the other in Vieux Habitants
   * Capacity of casualties that can be treated at one time is decided by the number of medical staff available.
   * If Stabilisation capacity is reached casualties will be added into queue.
-  * The rescue agents will decide on which PMA to travel to depending on the number casusilies in queue (travels to the smaller queue)
-  * If there is no queue (if there is availability in stabilisation - enough doctors available to treat casualties at that time) rescue agents will travel to the closest PMA.
+  * The model allows the number of medical staff available to be altered at two specific time intervals as initially there may be shortage of doctors. But as the rescue efforts progress more medical staff can be brought to the PMA's. 
+  * On occassions where there are not enough doctors, casualties will be transfered to queue where they will be selected once there is availability for stabalisation.
+  * Note that the queue is based on First in First Out (FIFO) basis and therfore once there is availability for stabilisation, casualties is brought at earliest time will considered first.
+  * Once the casualties are stabalised they will be transfered to a transfer hospital queue from which rescuers (A or B depending on the mode) transport them to the hospital.
+  * Its assumed that once stabalised, TS2 and TS3 casualties are distinguishable and hence as discussed previously rescuers will give priority to TS2 casualties from here on.
+  * Casualites of Trauma scale category 1 are considered recovered after stabilisation.
+  
+  * The PMA selected to travel to, by rescuers are highly dependent upon the queue size (waiting, stabilisation & awaiting transfer to hospital) discussed earlier. Rescuers will select the PMA based on the following rules where the rules at the top will have given higher precedence over the ones below. 
+    * On instance where the transfer hospital queue length has exceeded the user define threshold (In other words there are stabalised casualties than needs to be transported), rescuers will select that PMA to travel to as stabalised casualties will need to be transported next (Note this only for mode 1 - Version2)
+    * If not (above rule), travel to the PMA with the lower waiting queue 
+    * If not (above rule), travel to the PMA closer to the impact zone
+    * Also note if queue lengths are the same for above points (waiting queue, hospital queue length) the closer PMA will be selected.
     * Rescue agents will make decisions to travel to a certain PMA once its capacity has been reached. Once a decision has been made, the rescue agent will not change course to travel to a different PMA if stabilisation capacity has been reached. 
-  * Upon availabilty in stabilisation queue, casualties will be transfered to the stabilisation queue.
-  * Casualties with Trauma scale 2 and 3 are transported for further treament at hospital after stabilisation.
-  * Casualites of Trauma scale category 1 are considered recovered after stabilisation
-  * If stabilisation isnt open casualties will be added into the queue.
+    * Once the rescuers reach a PMA if there is availabilty in stabilisation queue, casualties will be transfered to a stabilisation queue.
+    * If stabilisation queue isnt open (Usually till the first hour or when there are no doctors) or full, casualties will be added into the queue. 
  
-* Hospital
+**Medical Facilities : Hospital**
   * Provides treatment for casualties with Trauma scale 2 and 3.
   * Medical equipment
     * Burn Beds (BB)
       * casualties who are offered burn beds will have reduced  mortality rate
-      * Priority given to casulties with TS3.
+      * Priority given to TS2 casualties as they are more likely to survive.
       * However TS3 casulties brought at a later time will be not offered burn beds if TS2 casualties are occupying burn beds.
     * Non Burn Beds (NBB)
       * casualties who are offered treatment at Non burn beds will have reduced mortality rate (lower than burn beds) 
       
-* General
+**General**
   * Model will run for 7200 ticks which refers to 5 days since impact in real life
     
-## Model Assumptions and Limitations
+### Model Limitations
 
-* Rescuers (Ambulance Type - A)
+* Rescuers (General)
   * Dont stop for activities such as refuling etc.
   * Its assumed that all rescuers travel at the same speed (speed will not change based on road type).
+  * The model heavily relies on targeting mechanism to prevent multiple rescuers traveling to rescue or transfer the same casualty.
+
+* Rescuers (For rescue activities at Impact zone)
   * Munkres assignment algorithm is used to optimise the assignment of casulty to each rescuer based on distance.
     * The algorithm minimises the total distance to travel by selecting the best rescuer-casualty combinations.
     * Ref : J. Munkres, "Algorithms for the Assignment and Transportation Problems", Journal of the Society for Industrial and Applied Mathematics, 5(1):32–38, 1957 March.
