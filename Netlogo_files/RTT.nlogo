@@ -1,4 +1,4 @@
-extensions [gis nw py] 
+extensions [gis nw py]
 globals [
   ;general
   G-target-agent G-target-node avg-time
@@ -46,7 +46,7 @@ breed [dummy-agents dummy-agent] ;dummy-agent for the purposes of labeling only.
 ;PRIMARY AGENT OWN VARIABLES:
 
 ;Casualties
-pop-agents-own [node-pop patch-pop targeted? TS PMA-at PMA-name PMA-at-node
+pop-agents-own [node-pop patch-pop targeted? targeted-by TS PMA-at PMA-name PMA-at-node
   on-route-PMA-time queue-time stabilise-time to-be-hospitalised-time on-route-hospital-time BB-admission-time NBB-admission-time Hospital-Queue-Time recovered-time deceased-time
   Rescue-by-Helicopter? Rescue-by-ambulance? awaiting-rescue?  on-route-PMA? in-queue? in-stabilisation? to-be-hospitalised?
   on-route-hospital? recovered? in-Burn-beds? in-Non-Burn-Beds? in-Hospital-Queue? Deceased?]
@@ -106,14 +106,15 @@ to setup-gis
   resize-world min-px max-px min-py max-py
 
 
+
   ;set current directory: Folder consisting gis files for model
   set-current-directory "D:\\ABM\\Gudaloupe New Model\\Trial Model"
-
+  
   ;declare global variables for each of the shapefiles and draw
   set guo-boundary gis:load-dataset "Edited_Gudaloupe_boundary.shp"
   gis:set-drawing-color 5
   gis:fill guo-boundary 1.0
-
+  
   set guo-impactzone gis:load-dataset "LaSoufrière_ImpactZones.shp"
   gis:set-drawing-color 6
   gis:fill guo-impactzone 1.0
@@ -123,9 +124,6 @@ to setup-gis
   set guo-PMA-Hosp-Airpt gis:load-dataset "PMA_and_Hospital_Airport_Volcano_Nodes_EPSG36320.shp"
 
   set guo-pop gis:load-dataset "PDC_Humans_default.shp"
-
-  ;gis:set-world-envelope gis:envelope-of guo-impactzone
-  ;gis:set-transformation-ds (gis:envelope-of guo-impactzone)(list (min-px) (max-px) (min-py) (max-py))
 
   ;for viewing only, to switch world-envelope : NOTE - DISTANCES CHANGE
   gis:set-world-envelope gis:envelope-of guo-boundary
@@ -356,7 +354,7 @@ to setup-population
 
     ]
     hatch-pop-agents TS2-count [
-      set color 103
+      set color 24
       set shape "person"
       set size 9.75 ;size 0.75 x 13
       set TS 2
@@ -484,7 +482,7 @@ to setup-visual-queue
     set pcolor 63;VH Stabilise
   ]
   ask patches with [pxcor >= 540 and pxcor < 620 and pycor > 80 and pycor <= 160][
-    set pcolor 24 ; on-Route-Hosp-ambulance
+    set pcolor 25 ; on-Route-Hosp-ambulance
     ]
   ask patches with [pxcor >= 540 and pxcor < 620 and pycor > 160 and pycor <= 240][
     set pcolor 34 ; on-Route-Hosp-helicopter
@@ -693,6 +691,7 @@ to setup-munkres-heli
           ask target-agent [
             set targeted? True
             set Rescue-by-Helicopter? True
+            set targeted-by heli-agent heli-who
           ]
         ]
 
@@ -714,6 +713,7 @@ to setup-munkres-heli
           ask target-agent [
             set targeted? true
             set Rescue-by-Helicopter? True
+            set targeted-by heli-agent heli-who
           ]
         ]
       ]
@@ -846,6 +846,7 @@ to setup-munkres
           ask target-agent [
             set targeted? True
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -868,6 +869,7 @@ to setup-munkres
           ask target-agent [
             set targeted? true
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -998,6 +1000,7 @@ to setup-munkres
           ask target-agent [
             set targeted? True
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -1020,6 +1023,7 @@ to setup-munkres
           ask target-agent [
             set targeted? true
             set Rescue-by-ambulance? True
+            set targeted-by resc-agent resc-who
             ;set label "targeted"
           ]
         ]
@@ -1190,8 +1194,6 @@ to follow-path
       remaining-distance < distance-to-next-node and remaining-distance > 0 [set Case 3]
       remaining-distance > distance-to-next-node [set Case 4]
       )
-
-
 
     if Case = 0[
       set jump-dist-net (jump-dist-net + rem-fm-prev-run)
@@ -1648,7 +1650,7 @@ to transfer-to-ambulance
         ask i[
           set on-route-hospital? True
           set on-route-hospital-time ticks
-          move-to one-of patches with [pcolor = 24]
+          move-to one-of patches with [pcolor = 25]
         ]
     ]
       set collected-agents-TS3 temp-list-TS3
@@ -1657,7 +1659,7 @@ to transfer-to-ambulance
         ask i[
           set on-route-hospital? True
           set on-route-hospital-time ticks
-          move-to one-of patches with [pcolor = 24]
+          move-to one-of patches with [pcolor = 25]
         ]
       ]
       if not empty? collected-agents-TS2 or not empty? collected-agents-TS3 [
@@ -2168,27 +2170,31 @@ to apply-mortality-rates
     i ->
     if ticks = i[
     print "chk 1"
-    ask n-of (0.8 * (count pop-agents with [TS = 3 and Deceased? = False])) (pop-agents with [TS = 3 and Deceased? = False]) [
-      print "chk 2"
-      set deceased? true
-      set deceased-time ticks
-      move-to one-of patches with [pcolor = 4]
-      set hidden? False
+      let agent-pecent round (0.8 * (count pop-agents with [TS = 3 and Deceased? = False]))
+      ask n-of agent-pecent (pop-agents with [TS = 3 and Deceased? = False]) [
+        print "chk 2"
+        set deceased? true
+        set deceased-time ticks
+        move-to one-of patches with [pcolor = 4]
+        set hidden? False
       ]
        ask pop-agents with [TS = 3 and Deceased? = True][
         update-TS3-lists
       ]
     ]
   ]
+
+  ;define agent sets for TS2 based on their current status to apply appropriate mortailty rate
   let TS2-BB-treat pop-agents with [TS = 2 and in-Burn-beds? = True and Deceased? = False]
   let TS2-NB-treat pop-agents with [TS = 2 and in-Non-Burn-beds? = True and deceased? = False]
-  let TS2-pretreat pop-agents with [TS = 2 and (in-Burn-beds? != True or in-Non-Burn-Beds? != True) and Deceased? = False]
+  let TS2-pretreat pop-agents with [TS = 2 and (in-Burn-beds? = False and in-Non-Burn-Beds? = False) and Deceased? = False]
 
   ; mortality rate TS2 in Burned Beds
   foreach (range 240 2880 60)[
     i ->
     if ticks = i[
-      ask n-of (0.00167 * (count TS2-BB-treat))(TS2-BB-Treat) [
+      let agent-percent round (0.00167 * (count TS2-BB-treat))
+      ask n-of agent-percent (TS2-BB-Treat) [
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2204,7 +2210,8 @@ to apply-mortality-rates
   foreach (range 240 1440 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0033 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent round (0.0017 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2218,7 +2225,8 @@ to apply-mortality-rates
   foreach (range 1440 2880 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0017 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent round (0.0066 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2232,7 +2240,8 @@ to apply-mortality-rates
   foreach (range 2880 4320 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0066 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0092 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2246,7 +2255,8 @@ to apply-mortality-rates
   foreach (range 4320 5760 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0092 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0063 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2260,7 +2270,8 @@ to apply-mortality-rates
  foreach (range 5760 99999 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0017 * (count TS2-NB-treat))(TS2-NB-Treat)[
+      let agent-percent (0.0063 * (count TS2-NB-treat))
+      ask n-of agent-percent (TS2-NB-Treat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2276,7 +2287,8 @@ to apply-mortality-rates
   foreach (range 240 480 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0125 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0125 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2290,7 +2302,8 @@ to apply-mortality-rates
   foreach (range 480 720 60)[
     i ->
     if ticks = i[
-    ask n-of (0.075 * (count TS2-pretreat))(TS2-pretreat)[
+    let agent-percent (0.075 * (count TS2-pretreat))
+    ask n-of agent-percent (TS2-pretreat)[
       set deceased? true
       set deceased-time ticks
       move-to one-of patches with [pcolor = 4]
@@ -2304,7 +2317,8 @@ to apply-mortality-rates
   foreach (range 720 1440 60)[
     i ->
     if ticks = (range 780 1440 60)[
-      ask n-of (0.0333 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0333 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2318,7 +2332,8 @@ to apply-mortality-rates
   foreach (range 1440 99999 60)[
     i ->
     if ticks = i[
-      ask n-of (0.0417 * (count TS2-pretreat))(TS2-pretreat)[
+      let agent-percent (0.0417 * (count TS2-pretreat))
+      ask n-of agent-percent (TS2-pretreat)[
         set deceased? true
         set deceased-time ticks
         move-to one-of patches with [pcolor = 4]
@@ -2330,54 +2345,11 @@ to apply-mortality-rates
     ]
   ]
 
-end
-
-;********************************************************************************************************************************************************************************************************************************** Print lists
-to print-lists
-
-  output-type "Recovered-TS1: " output-print Recovered-TS1
-  output-type "Recovered-TS1 time: " output-print Recovered-time-TS1
-
-  output-type "TS2 Deceased in Queue: " output-print Decd-Queue-TS2
-  output-type "TS2 Deceased in Queue Time: " output-print Decd-Queue-Time-TS2
-  output-type "TS3 Deceased in Queue: " output-print Decd-Queue-TS3
-  output-type "TS3 Deceased in Queue Time: " output-print Decd-Queue-Time-TS3
-
-  output-type "TS2 Deceased in Stabilisation: " output-print Decd-stabilise-TS2
-  output-type "TS2 Decased in Stabilisation Time: " output-print Decd-stabilise-Time-TS2
-  output-type "TS3 Deceased in Stabilisation: " output-print Decd-stabilise-TS3
-  output-type "TS3 Deceased in Stabilisation Time: " output-print Decd-stabilise-Time-TS3
-
-  output-type "TS2 Deceased in Burn Beds: " output-print Decd-BB-TS2
-  output-type "TS2 Deceased in Burn Beds Time: " output-print Decd-BB-Time-TS2
-  output-type "TS3 Deceased in Burn Beds: " output-print Decd-BB-TS3
-  output-type "TS3 Deceased in Burn Beds Time: " output-print Decd-BB-Time-TS3
-
-  output-type "TS2 Deceased in Non Burn Beds: " output-print Decd-NBB-TS2
-  output-type "TS2 Deceased in Non Burn Beds Time: " output-print Decd-NBB-Time-TS2
-  output-type "TS3 Deceased in Non Burn Beds: " output-print Decd-NBB-TS3
-  output-type "TS3 Deceased in Non Burn Beds Time: " output-print Decd-NBB-Time-TS3
-
-  output-type "TS2 Deceased in Hospital Queue: " output-print Decd-Hosp-Q-TS2
-  output-type "TS2 Deceased in Hospital Queue Time: "output-print Decd-Hosp-Q-time-TS2
-  output-type "TS3 Deceased in Hospital Queue: " output-print Decd-Hosp-Q-TS3
-  output-type "TS3 Deceased in Hospital Queue Time: "output-print Decd-Hosp-Q-Time-TS3
-
-  output-type "TS2 Deceased while Awaiting Rescue: " output-print Decd-AwaResc-TS2
-  output-type "TS2 Deceased while Awaiting Rescue Time: " output-print Decd-AwaResc-Time-TS2
-  output-type "TS3 Deceased while Awaiting Rescue: "output-print Decd-AwaResc-TS3
-  output-type "TS3 Deceased while Awaiting Rescue Time: " output-print Decd-AwaResc-Time-TS3
-
-  output-type "TS2 Deceased while on Route to PMA: " output-print Decd-OnRout-PMA-TS2
-  output-type "TS2 Deceased while on Route to PMA Time: "output-print Decd-OnRout-PMA-Time-TS2
-  output-type "TS3 Deceased while on Route to PMA: " output-print Decd-OnRout-PMA-TS3
-  output-type "TS3 Deceased while on Route to PMA Time: " output-print Decd-OnRout-PMA-Time-TS3
-
-  output-type "TS2 Deceased while on Route to hospital: " output-print Decd-OnRout-Hosp-TS2
-  output-type "TS2 Deceased while on Route to hospital time: " output-print Decd-OnRout-Hosp-Time-TS2
-  output-type "TS3 Deceased while on Route to hospital: " output-print Decd-OnRout-Hosp-TS3
-  output-type "TS3 Deceased while on Route to hospital Time: " output-print Decd-OnRout-Hosp-Time-TS3
-
+  ask resc-agents [renew-resc-list]
+  ask ambulances [renew-ambulance-list]
+  ask PMA's [renew-pma-lists]
+  ask hospitals [renew-hospital-lists]
+  ask heli-agents[renew-helicopter-list]
 end
 
 
@@ -2387,7 +2359,8 @@ end
 to go
 
   if ticks >= 60 and ticks <= 7200[
-
+    
+    ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ RESCUE AGENT FUNCTIONS
     ask resc-agents with [Mode = "Searching !!!"][
       ifelse count pop-agents with [targeted? = False and deceased? = False] != 0[ ; stops search function if there are no pop-agents left
       ;radius-search
@@ -2431,7 +2404,6 @@ to go
   ask resc-agents with [Mode = "Travel to PMA"][
     ifelse current-node = node-agent-at and is-PMA? target-agent[
       set Mode "At PMA"
-      set color violet
       set rescue-time 10
     ]
     [
@@ -2468,18 +2440,25 @@ to go
 
   ask resc-agents with [Mode = "Rescuing !!!"][
    Time-to-Rescue
-    if rescue-time = 0[
-      collect-agent
-      set label ""
-      ifelse (length Rescued-agents-list = resc-agent-capacity) or (count pop-agents with [deceased? = False and awaiting-rescue? = False] = 0)[
-         set Mode "Return to PMA"
+      (ifelse
+        rescue-time = 0 and ([deceased?] of target-agent = False)[
+          collect-agent
+          set label ""
+          ifelse (length Rescued-agents-list = resc-agent-capacity) or (count pop-agents with [deceased? = False and awaiting-rescue? = True] = 0)[
+            set Mode "Return to PMA"
+          ]
+          [
+            set rescue-time rescue-time-mins
+            set Mode "Searching !!!"
+          ]
         ]
-        [
-        set rescue-time rescue-time-mins
-        set Mode "Searching !!!"
-        ]
-      ]
-  ]
+        rescue-time = 0 and ([deceased?] of target-agent = True)[
+          ; if the agent been rescued is deceased
+          set Mode "Searching !!!"
+          set target-agent nobody
+          set rescue-time rescue-time-mins
+        ])
+    ]
 
      ;*********************************************************************************************** FIND CLOSEST PMA
   ask resc-agents with [Mode = "Return to PMA"][
@@ -2513,7 +2492,7 @@ to go
   ask resc-agents with [Mode = "Rescue Ended"][
     set list-of-time fput 1 list-of-time
   ]
-  ;####################################################################################################### HELICOPTER RESCUE
+  ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ HELICOPTER RESCUE
     if helicopter-rescue = True [
       ask heli-agents with [Mode = "Searching !!!"][
         ifelse count pop-agents with [(TS = 2 or TS = 3) and targeted? = False and deceased? = False] != 0[
@@ -2545,26 +2524,39 @@ to go
       ]
       ask heli-agents with [Mode = "Active"][
         follow-path-heli
-    if current-patch = patch-agent-at[
-      set Mode "Rescuing !!!"
-    ]
-  ]
-  ask heli-agents with [Mode = "Rescuing !!!"][
-    time-to-rescue
-    if rescue-time = 0[
-      collect-agent
-      ifelse (length Rescued-Agents-List) =  Helicopter-capacity[
-        set Mode "Return to Hospital"
-        set target-agent one-of hospitals
-        set patch-agent-at hospital-patch
-        set Rescue-time Rescue-time-mins
-      ]
-      [
-        set Mode "Searching !!!"
-        set Rescue-time Rescue-time-mins
-      ]
+        if current-patch = patch-agent-at[
+          set Mode "Rescuing !!!"
         ]
       ]
+      
+      ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Helicopter : Time to Rescue Agent
+      
+      ask heli-agents with [Mode = "Rescuing !!!"][
+        time-to-rescue
+        (ifelse rescue-time = 0 and [deceased?] of target-agent = False[
+          collect-agent
+          ifelse (length Rescued-Agents-List) =  Helicopter-capacity or (count pop-agents with [ (TS = 2 or TS = 3) and deceased? = False and awaiting-rescue? = True] = 0)[
+            set Mode "Return to Hospital"
+            set target-agent one-of hospitals
+            set patch-agent-at hospital-patch
+            set Rescue-time Rescue-time-mins
+          ]
+          [
+            set Mode "Searching !!!"
+            set Rescue-time Rescue-time-mins
+          ]
+          ]
+          rescue-time = 0 and ([deceased?] of target-agent = True)[
+            ; if the agent been rescued is deceased
+            set Mode "Searching !!!"
+            set target-agent nobody
+            set rescue-time rescue-time-mins
+          ]
+        )
+      ]
+      
+      ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      
       ask heli-agents with [Mode = "Return to Hospital"][
         follow-path-heli
         if is-hospital? target-agent and current-patch = patch-agent-at[
@@ -2635,7 +2627,7 @@ to go
     set list-of-time fput 1 list-of-time
   ]
   let time-since-eruption 60
-  set avg-time time-since-eruption + (sum [sum list-of-time] of resc-agents) / count resc-agents
+  ;set avg-time time-since-eruption + (sum [sum list-of-time] of resc-agents) / count resc-agents
   ]
 
   ;**************************************************************************************** Update ticks
@@ -2644,10 +2636,56 @@ to go
 
  ;***************************************************************************************** TO APPLY MORTALITY RATES AND REMOVE AGENTS
     apply-mortality-rates
-    ask resc-agents [renew-resc-list]
-    ask ambulances [renew-ambulance-list]
-    ask PMA's [renew-pma-lists]
-    ask hospitals [renew-hospital-lists]
-    ask heli-agents[renew-helicopter-list]
+
   ]
+end
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   Print Data    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+;********************************************************************************************************************************************************************************************************************************** Print lists
+to print-lists
+
+  output-type "Recovered-TS1: " output-print Recovered-TS1
+  output-type "Recovered-TS1 time: " output-print Recovered-time-TS1
+
+  output-type "TS2 Deceased in Queue: " output-print Decd-Queue-TS2
+  output-type "TS2 Deceased in Queue Time: " output-print Decd-Queue-Time-TS2
+  output-type "TS3 Deceased in Queue: " output-print Decd-Queue-TS3
+  output-type "TS3 Deceased in Queue Time: " output-print Decd-Queue-Time-TS3
+
+  output-type "TS2 Deceased in Stabilisation: " output-print Decd-stabilise-TS2
+  output-type "TS2 Decased in Stabilisation Time: " output-print Decd-stabilise-Time-TS2
+  output-type "TS3 Deceased in Stabilisation: " output-print Decd-stabilise-TS3
+  output-type "TS3 Deceased in Stabilisation Time: " output-print Decd-stabilise-Time-TS3
+
+  output-type "TS2 Deceased in Burn Beds: " output-print Decd-BB-TS2
+  output-type "TS2 Deceased in Burn Beds Time: " output-print Decd-BB-Time-TS2
+  output-type "TS3 Deceased in Burn Beds: " output-print Decd-BB-TS3
+  output-type "TS3 Deceased in Burn Beds Time: " output-print Decd-BB-Time-TS3
+
+  output-type "TS2 Deceased in Non Burn Beds: " output-print Decd-NBB-TS2
+  output-type "TS2 Deceased in Non Burn Beds Time: " output-print Decd-NBB-Time-TS2
+  output-type "TS3 Deceased in Non Burn Beds: " output-print Decd-NBB-TS3
+  output-type "TS3 Deceased in Non Burn Beds Time: " output-print Decd-NBB-Time-TS3
+
+  output-type "TS2 Deceased in Hospital Queue: " output-print Decd-Hosp-Q-TS2
+  output-type "TS2 Deceased in Hospital Queue Time: "output-print Decd-Hosp-Q-time-TS2
+  output-type "TS3 Deceased in Hospital Queue: " output-print Decd-Hosp-Q-TS3
+  output-type "TS3 Deceased in Hospital Queue Time: "output-print Decd-Hosp-Q-Time-TS3
+
+  output-type "TS2 Deceased while Awaiting Rescue: " output-print Decd-AwaResc-TS2
+  output-type "TS2 Deceased while Awaiting Rescue Time: " output-print Decd-AwaResc-Time-TS2
+  output-type "TS3 Deceased while Awaiting Rescue: "output-print Decd-AwaResc-TS3
+  output-type "TS3 Deceased while Awaiting Rescue Time: " output-print Decd-AwaResc-Time-TS3
+
+  output-type "TS2 Deceased while on Route to PMA: " output-print Decd-OnRout-PMA-TS2
+  output-type "TS2 Deceased while on Route to PMA Time: "output-print Decd-OnRout-PMA-Time-TS2
+  output-type "TS3 Deceased while on Route to PMA: " output-print Decd-OnRout-PMA-TS3
+  output-type "TS3 Deceased while on Route to PMA Time: " output-print Decd-OnRout-PMA-Time-TS3
+
+  output-type "TS2 Deceased while on Route to hospital: " output-print Decd-OnRout-Hosp-TS2
+  output-type "TS2 Deceased while on Route to hospital time: " output-print Decd-OnRout-Hosp-Time-TS2
+  output-type "TS3 Deceased while on Route to hospital: " output-print Decd-OnRout-Hosp-TS3
+  output-type "TS3 Deceased while on Route to hospital Time: " output-print Decd-OnRout-Hosp-Time-TS3
+
 end
